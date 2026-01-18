@@ -1,6 +1,6 @@
 # mini_spring
 
-Spring Boot 기반의 게시글/댓글 API 서버입니다. (JWT 인증 + OAuth2 소셜 로그인 지원)
+Spring Boot API 서버입니다. (JWT 인증 + OAuth2 소셜 로그인 지원)
 
 ## 기술 스택
 - Java 17 / Spring Boot 3.3.4 / Gradle
