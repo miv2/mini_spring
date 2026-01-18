@@ -3,11 +3,17 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  JAVA_VERSION: '17'
+  # Docker ID를 secrets에서 가져오거나 수동 입력 (여기선 secrets 활용)
+  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/mini_spring
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -15,7 +21,29 @@ jobs:
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+
+    - name: Run tests
+      run: ./gradlew test --no-daemon
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
         cache: gradle
 
@@ -28,15 +56,29 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
 
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_IMAGE }}
+        tags: |
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/mini_spring:latest
+        tags: ${{ steps.meta.outputs.tags }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
     - name: Deploy to Server via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
@@ -44,15 +86,37 @@ jobs:
         username: ${{ secrets.SERVER_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         script: |
+          set -e
           cd ~/nginx-docker
-          # 1. 새 도커 이미지 내려받기 (Docker ID를 사용해 태그 구성)
-          docker pull ${{ secrets.DOCKER_USERNAME }}/mini_spring:latest
           
-          # 2. docker-compose.yml 파일 내의 이미지 주소 업데이트 (sed 명령어로 자동 치환)
-          sed -i "s|image: .*/mini_spring:latest|image: ${{ secrets.DOCKER_USERNAME }}/mini_spring:latest|g" docker-compose.yml
+          echo "=== Pulling new Docker image ==="
+          docker pull ${{ env.DOCKER_IMAGE }}:latest
           
-          # 3. 기존 컨테이너 중지 및 삭제 (이미지가 바뀐 경우 재시작)
-          docker compose up -d --force-recreate
+          echo "=== Starting new container ==="
+          # 서비스명 'app' (docker-compose.yml 기준)을 명시하여 재시작
+          docker compose up -d --force-recreate app
           
-          # 4. 사용하지 않는 오래된 이미지 정리
+          echo "=== Waiting for application to be healthy ==="
+          MAX_RETRY=15
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
+            # 컨테이너명 'mini-spring-app' 내부에서 8081 포트 헬스체크
+            if docker exec mini-spring-app curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
+              echo "✓ Application is healthy!"
+              break
+            fi
+            
+            RETRY_COUNT=$((RETRY_COUNT+1))
+            echo "Waiting for app... ($RETRY_COUNT/$MAX_RETRY)"
+            sleep 5
+          done
+          
+          if [ $RETRY_COUNT -eq $MAX_RETRY ]; then
+            echo "✗ Health check failed."
+            docker compose logs app --tail=50
+            exit 1
+          fi
+          
+          echo "=== Cleaning up old images ==="
           docker image prune -f
