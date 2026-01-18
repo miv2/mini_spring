@@ -1,0 +1,139 @@
+### 공통 변수 설정
+@baseUrl = http://localhost:8081
+@accessToken = {{accessToken}}
+@refreshToken = {{refreshToken}}
+
+################################################################################
+### 1. 인증(Auth) API
+################################################################################
+
+### 1.1 회원가입
+POST {{baseUrl}}/api/v1/auth/signup
+Content-Type: application/json
+
+{
+  "email": "tester@example.com",
+  "password": "password1234",
+  "passwordConfirm": "password1234"
+}
+
+### 1.2 로그인 (액세스/리프레시 토큰 발급)
+POST {{baseUrl}}/api/v1/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password1234"
+}
+
+> {%
+    const parsed = typeof response.body === "string" ? JSON.parse(response.body) : response.body;
+    if (parsed?.data?.accessToken) {
+        client.global.set("accessToken", parsed.data.accessToken);
+    }
+    if (parsed?.data?.refreshToken) {
+        client.global.set("refreshToken", parsed.data.refreshToken);
+    }
+%}
+
+### 1.3 리프레시 토큰으로 액세스 토큰 재발급
+POST {{baseUrl}}/api/v1/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+> {%
+    const parsed = typeof response.body === "string" ? JSON.parse(response.body) : response.body;
+    if (parsed?.data?.accessToken) {
+        client.global.set("accessToken", parsed.data.accessToken);
+    }
+    if (parsed?.data?.refreshToken) {
+        client.global.set("refreshToken", parsed.data.refreshToken);
+    }
+%}
+
+### 1.4 로그아웃 (서버에 저장된 리프레시 토큰 무효화)
+POST {{baseUrl}}/api/v1/auth/logout
+Authorization: Bearer {{accessToken}}
+
+### (참고) 소셜 로그인 진입점 - 브라우저에서 접속
+GET {{baseUrl}}/oauth2/authorization/google
+
+################################################################################
+### 2. 게시글(Post) API
+################################################################################
+
+### 2.1 게시글 목록 조회 (page/size/sort=recent|likes|oldest)
+GET {{baseUrl}}/api/v1/posts?page=0&size=10&sort=recent
+Authorization: Bearer {{accessToken}}
+
+### 2.2 게시글 상세 조회 (로그인 시 isOwner 포함)
+GET {{baseUrl}}/api/v1/posts/1
+Authorization: Bearer {{accessToken}}
+
+### 2.3 게시글 생성
+POST {{baseUrl}}/api/v1/posts
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "스프링 부트로 REST API 만들기",
+  "content": "본문 내용입니다.",
+  "hashtags": [
+    "spring",
+    "backend"
+  ]
+}
+
+### 2.4 게시글 수정
+PUT {{baseUrl}}/api/v1/posts/1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "title": "제목 수정 예시",
+  "content": "수정된 본문입니다.",
+  "hashtags": [
+    "spring",
+    "java",
+    "tips"
+  ]
+}
+
+### 2.5 게시글 삭제
+DELETE {{baseUrl}}/api/v1/posts/1
+Authorization: Bearer {{accessToken}}
+
+### 2.6 게시글 좋아요 토글
+POST {{baseUrl}}/api/v1/posts/1/like
+Authorization: Bearer {{accessToken}}
+
+################################################################################
+### 3. 댓글(Comment) API
+################################################################################
+
+### 3.1 댓글 또는 대댓글 생성
+POST {{baseUrl}}/api/v1/comments
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "postId": 1,
+  "content": "첫 번째 댓글입니다.",
+  "parentId": null
+}
+
+### 3.2 댓글 수정
+PUT {{baseUrl}}/api/v1/comments/1
+Authorization: Bearer {{accessToken}}
+Content-Type: application/json
+
+{
+  "content": "댓글 내용을 수정했습니다."
+}
+
+### 3.3 댓글 삭제 (소프트 삭제)
+DELETE {{baseUrl}}/api/v1/comments/1
+Authorization: Bearer {{accessToken}}

@@ -1,0 +1,56 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/app_server?useSSL=false&serverTimezone=Asia/Seoul}
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:your-password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MariaDBDialect
+        jdbc:
+          time_zone: Asia/Seoul
+    open-in-view: false
+
+  # OAuth2 설정 (테스트용 더미 값 추가)
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${TEST_GOOGLE_CLIENT_ID:test-google-client-id}
+            client-secret: ${TEST_GOOGLE_CLIENT_SECRET:test-google-client-secret}
+            scope:
+              - profile
+              - email
+            redirect-uri: "http://localhost:8080/login/oauth2/code/google"
+            authorization-grant-type: authorization_code
+            client-name: Google
+          kakao:
+            client-id: ${TEST_KAKAO_CLIENT_ID:test-kakao-client-id}
+            client-secret: ${TEST_KAKAO_CLIENT_SECRET:test-kakao-client-secret}
+            scope:
+              - profile_nickname
+              - account_email
+            client-name: Kakao
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://localhost:8080/login/oauth2/code/kakao"
+            client-authentication-method: client_secret_post
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+logging:
+  level:
+    co.kr.mini_spring: DEBUG
+
+jwt:
+  secret: ${TEST_JWT_SECRET:testSecretKeytestSecretKeytestSecretKeytestSecretKey}
+  access-token-expiration: 3600000
+  refresh-token-expiration: 604800000
