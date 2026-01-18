@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Enterprise CI/CD Pipeline
 
 on:
   push:
@@ -11,7 +11,6 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -22,6 +21,9 @@ jobs:
         java-version: ${{ env.JAVA_VERSION }}
         distribution: 'temurin'
         cache: gradle
+
+    - name: Build with Gradle
+      run: ./gradlew clean build -x test --no-build-cache
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -38,7 +40,7 @@ jobs:
       with:
         images: ${{ env.DOCKER_IMAGE }}
         tags: |
-          type=sha,prefix={{branch}}-
+          type=sha,prefix=
           type=raw,value=latest,enable={{is_default_branch}}
 
     - name: Build and push Docker image
@@ -53,7 +55,6 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    
     steps:
     - name: Deploy to Server via SSH
       uses: appleboy/ssh-action@v1.0.3
@@ -65,37 +66,54 @@ jobs:
           set -e
           cd ~/nginx-docker
           
-          echo "=== Pulling new Docker image ==="
-          docker pull ${{ env.DOCKER_IMAGE }}:latest
+          # 1. 이전 이미지 ID 백업 (롤백용)
+          OLD_IMAGE_ID=$(docker images -q ${{ env.DOCKER_IMAGE }}:latest || true)
+          NEW_TAG="${{ github.sha }}"
           
-          echo "=== Starting new container ==="
+          echo "=== 1. Pulling New Image [${NEW_TAG}] ==="
+          docker pull ${{ env.DOCKER_IMAGE }}:${NEW_TAG}
+          docker tag ${{ env.DOCKER_IMAGE }}:${NEW_TAG} ${{ env.DOCKER_IMAGE }}:latest
+          
+          echo "=== 2. Deploying New Version ==="
+          # docker-compose up은 이미지가 변경되었을 때만 재시작함
           docker compose up -d --force-recreate app
           
-          echo "=== Waiting for application to be healthy ==="
-          MAX_RETRY=10
+          echo "=== 3. Health Checking... ==="
+          MAX_RETRY=15
           RETRY_COUNT=0
           
           while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
-            # 컨테이너 상태가 running인지 확인
-            STATUS=$(docker inspect --format='{{.State.Status}}' mini-spring-app)
-            if [ "$STATUS" == "running" ]; then
-              echo "✓ Container is running!"
-              # 잠시 대기 후 실제 앱 응답 확인 (포트 오픈 여부)
-              sleep 10
-              echo "✓ Application deployment successful!"
+            # 앱의 응답 확인 (200 OK 또는 401 Unauthorized가 오면 앱이 뜬 것으로 간주)
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/actuator/health || true)
+            
+            if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "401" ]; then
+              echo "✓ Application is healthy! (Status: $HTTP_STATUS)"
               break
             fi
             
             RETRY_COUNT=$((RETRY_COUNT+1))
-            echo "Waiting for container... ($RETRY_COUNT/$MAX_RETRY)"
-            sleep 5
+            echo "Waiting for app to start... ($RETRY_COUNT/$MAX_RETRY) [Status: $HTTP_STATUS]"
+            sleep 10
           done
           
+          # 4. 헬스 체크 실패 시 자동 롤백
           if [ $RETRY_COUNT -eq $MAX_RETRY ]; then
-            echo "✗ Health check failed."
-            docker compose logs app --tail=50
+            echo "✗ Health check failed! Starting rollback..."
+            
+            echo "=== [DEBUG] Recent Application Logs ==="
+            docker compose logs --tail 50 app
+            
+            if [ ! -z "$OLD_IMAGE_ID" ]; then
+              echo "=== Rolling back to Image ID: $OLD_IMAGE_ID ==="
+              docker tag $OLD_IMAGE_ID ${{ env.DOCKER_IMAGE }}:latest
+              docker compose up -d --force-recreate app
+              echo "✓ Rollback completed successfully."
+            else
+              echo "✗ No previous image found to rollback."
+            fi
             exit 1
           fi
           
-          echo "=== Cleaning up old images ==="
-          docker image prune -f
+          echo "=== 5. Cleanup Old Images ==="
+          docker image prune -af
+          echo "=== Deployment Successful ==="
