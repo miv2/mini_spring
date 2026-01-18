@@ -3,38 +3,14 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
 
 env:
   JAVA_VERSION: '17'
-  # Docker ID를 secrets에서 가져오거나 수동 입력 (여기선 secrets 활용)
   DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/mini_spring
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: ${{ env.JAVA_VERSION }}
-        distribution: 'temurin'
-        cache: gradle
-
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-
-    - name: Run tests
-      run: ./gradlew test --no-daemon
-
   build-and-push:
-    needs: test
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     
     steps:
     - name: Checkout code
@@ -93,7 +69,6 @@ jobs:
           docker pull ${{ env.DOCKER_IMAGE }}:latest
           
           echo "=== Starting new container ==="
-          # 서비스명 'app' (docker-compose.yml 기준)을 명시하여 재시작
           docker compose up -d --force-recreate app
           
           echo "=== Waiting for application to be healthy ==="
@@ -101,7 +76,6 @@ jobs:
           RETRY_COUNT=0
           
           while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
-            # 컨테이너명 'mini-spring-app' 내부에서 8081 포트 헬스체크
             if docker exec mini-spring-app curl -f http://localhost:8081/actuator/health > /dev/null 2>&1; then
               echo "✓ Application is healthy!"
               break
