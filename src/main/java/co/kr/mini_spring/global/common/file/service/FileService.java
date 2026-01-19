@@ -1,7 +1,9 @@
 package co.kr.mini_spring.global.common.file.service;
 
+import co.kr.mini_spring.global.common.exception.FileException;
 import co.kr.mini_spring.global.common.file.domain.ImageFile;
 import co.kr.mini_spring.global.common.file.domain.repository.ImageFileRepository;
+import co.kr.mini_spring.global.common.response.ResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,7 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,7 +42,7 @@ public class FileService {
         validateImage(file);
 
         // 2. 경로 및 파일명 생성
-        String datePath = createDatePath(); // 예: 2026/01/19
+        String datePath = createDatePath();
         String originalName = file.getOriginalFilename();
         String extension = extractExtension(originalName);
         String storedName = UUID.randomUUID().toString() + "." + extension;
@@ -57,10 +58,10 @@ public class FileService {
             log.info("[파일 저장 성공] path={}", targetPath);
         } catch (IOException e) {
             log.error("[파일 저장 실패] error={}", e.getMessage());
-            throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
+            throw new FileException(ResponseCode.FILE_UPLOAD_ERROR, "파일 저장 중 오류가 발생했습니다.");
         }
 
-        // 5. DB 메타데이터 저장 (현업 스타일: 상대 경로로 저장)
+        // 5. DB 메타데이터 저장
         ImageFile imageFile = ImageFile.builder()
                 .originName(originalName)
                 .storedName(storedName)
@@ -77,18 +78,17 @@ public class FileService {
      */
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("업로드할 파일이 없습니다.");
+            throw new FileException(ResponseCode.INVALID_INPUT_VALUE, "업로드할 파일이 없습니다.");
         }
 
         String extension = extractExtension(file.getOriginalFilename());
         if (!ALLOWED_IMAGE_EXTENSIONS.contains(extension.toLowerCase())) {
-            throw new IllegalArgumentException("허용되지 않는 파일 형식입니다. (허용: jpg, jpeg, png, gif, webp)");
+            throw new FileException(ResponseCode.INVALID_FILE_TYPE);
         }
 
-        // 현업 스타일: 실제 MIME 타입 체크 추가 가능 (Tika 등의 라이브러리 활용 권장)
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
-            throw new IllegalArgumentException("이미지 파일만 업로드 가능합니다.");
+            throw new FileException(ResponseCode.INVALID_FILE_TYPE, "이미지 파일만 업로드 가능합니다.");
         }
     }
 
@@ -108,7 +108,7 @@ public class FileService {
                 Files.createDirectories(path);
             }
         } catch (IOException e) {
-            throw new RuntimeException("디렉토리 생성에 실패했습니다.", e);
+            throw new FileException(ResponseCode.FILE_UPLOAD_ERROR, "디렉토리 생성에 실패했습니다.");
         }
     }
 

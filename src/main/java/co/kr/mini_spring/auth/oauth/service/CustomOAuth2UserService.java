@@ -53,7 +53,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         OAuthAttributes attributes;
         try {
             attributes = OAuthAttributes.of(registrationId, userNameAttributeName, oAuth2User.getAttributes());
-        } catch (IllegalArgumentException e) {
+        } catch (co.kr.mini_spring.global.common.exception.BusinessException e) {
             throw new OAuth2AuthenticationException(new OAuth2Error("unsupported_provider"), e.getMessage());
         }
 

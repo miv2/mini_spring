@@ -44,7 +44,7 @@ public enum ResponseCode {
     REFRESH_TOKEN_NOT_FOUND("A005", "리프레시 토큰을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED),
     REFRESH_TOKEN_EXPIRED("A006", "리프레시 토큰이 만료되었습니다.", HttpStatus.UNAUTHORIZED),
 
-    // File (F)
+    // File
     FILE_NOT_FOUND("F001", "파일을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     INVALID_FILE_TYPE("F002", "허용되지 않은 파일 형식입니다.", HttpStatus.BAD_REQUEST),
     FILE_SIZE_EXCEEDED("F003", "파일 크기가 제한을 초과했습니다.", HttpStatus.PAYLOAD_TOO_LARGE),

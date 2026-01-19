@@ -2,6 +2,8 @@ package co.kr.mini_spring.member.service;
 
 import co.kr.mini_spring.global.common.file.domain.ImageFile;
 import co.kr.mini_spring.global.common.file.service.FileService;
+import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.member.domain.Member;
 import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
@@ -11,6 +13,7 @@ import co.kr.mini_spring.member.domain.repository.MemberQueryRepository;
 import co.kr.mini_spring.auth.token.domain.RefreshToken;
 import co.kr.mini_spring.auth.token.repository.RefreshTokenRepository;
 import co.kr.mini_spring.member.dto.request.SignUpRequest;
+import co.kr.mini_spring.member.dto.response.MemberResponse;
 import co.kr.mini_spring.member.dto.response.SignUpResponse;
 import co.kr.mini_spring.member.exception.EmailAlreadyExistsException;
 import co.kr.mini_spring.member.exception.PasswordMismatchException;
@@ -95,13 +98,23 @@ public class MemberService {
     }
 
     /**
+     * 내 정보를 조회합니다.
+     */
+    @Transactional(readOnly = true)
+    public MemberResponse getMyInfo(Long memberId) {
+        Member member = memberQueryRepository.findByIdWithProfileImage(memberId)
+                .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
+        return new MemberResponse(member, defaultProfileImage);
+    }
+
+    /**
      * 사용자의 프로필 이미지를 업데이트합니다.
      */
     @Transactional
     public String updateProfileImage(Long memberId, MultipartFile file) {
         // 최적화된 Querydsl 조회 사용
         Member member = memberQueryRepository.findByIdWithProfileImage(memberId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 회원입니다."));
+                .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
 
         // 1. 새 이미지 파일 저장
         ImageFile imageFile = fileService.uploadImage(file);

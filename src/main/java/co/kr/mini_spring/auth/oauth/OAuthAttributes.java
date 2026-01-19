@@ -1,10 +1,11 @@
 package co.kr.mini_spring.auth.oauth;
 
-
+import co.kr.mini_spring.global.common.exception.BusinessException;
+import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.Member;
+import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
 import co.kr.mini_spring.member.domain.MemberStatus;
-import co.kr.mini_spring.member.domain.MemberProvider;
 import lombok.Builder;
 import lombok.Getter;
 import org.springframework.util.StringUtils;
@@ -37,17 +38,17 @@ public class OAuthAttributes {
     }
 
     /**
-        * 공급자(registrationId)에 따라 적절한 변환 로직을 선택한다.
-        */
+     * 공급자(registrationId)에 따라 적절한 변환 로직을 선택한다.
+     */
     public static OAuthAttributes of(String registrationId, String userNameAttributeName, Map<String, Object> attributes) {
         if (!StringUtils.hasText(registrationId)) {
-            throw new IllegalArgumentException("registrationId가 비어있습니다.");
+            throw new BusinessException(ResponseCode.INVALID_INPUT_VALUE, "registrationId가 비어있습니다.");
         }
 
         return switch (registrationId.toLowerCase()) {
             case "kakao" -> ofKakao("id", attributes);
             case "google" -> ofGoogle(userNameAttributeName, attributes);
-            default -> throw new IllegalArgumentException("지원하지 않는 OAuth 제공자입니다: " + registrationId);
+            default -> throw new BusinessException(ResponseCode.INVALID_INPUT_VALUE, "지원하지 않는 OAuth 제공자입니다: " + registrationId);
         };
     }
 
