@@ -15,12 +15,14 @@ import java.util.Set;
 @Table(name = "post", indexes = {
         @Index(name = "idx_member_id", columnList = "member_id"),
         @Index(name = "idx_created_at", columnList = "created_at"),
-        @Index(name = "idx_published", columnList = "is_published")
+        @Index(name = "idx_published", columnList = "is_published"),
+        @Index(name = "idx_deleted_at", columnList = "deleted_at")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
+@org.hibernate.annotations.SQLRestriction("deleted_at IS NULL")
 public class Post {
 
     @Id
@@ -61,6 +63,9 @@ public class Post {
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @BatchSize(size = 100)
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -116,5 +121,12 @@ public class Post {
      */
     public void togglePublishedStatus() {
         this.published = !this.published;
+    }
+
+    /**
+     * 게시글을 논리적으로 삭제합니다.
+     */
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
     }
 }

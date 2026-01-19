@@ -13,6 +13,7 @@ public class SignUpResponse {
     private final String email;
     private final String name;
     private final String nickname;
+    private final String profileImageUrl;
     private final MemberRole role;
     private final String accessToken;
     private final LocalDateTime accessTokenExpiresAt;

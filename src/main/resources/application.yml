@@ -5,6 +5,11 @@ spring:
   application:
     name: mini_spring
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
   security:
     oauth2:
       client:
@@ -73,3 +78,7 @@ springdoc:
     defaultModelsExpandDepth: -1  # Schemas 패널 기본 숨김
     defaultModelExpandDepth: 0
     displayRequestDuration: true
+
+file:
+  upload-dir: /app/uploads/
+  default-profile-image: /uploads/default-profile.png

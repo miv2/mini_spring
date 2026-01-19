@@ -32,7 +32,7 @@ public final class NicknameGenerator {
     private static String buildNickname() {
         String adjective = ADJECTIVES[RANDOM.nextInt(ADJECTIVES.length)];
         String noun = NOUNS[RANDOM.nextInt(NOUNS.length)];
-        int number = RANDOM.nextInt(900) + 100; // 100~999
-        return String.format("%s %s %d", adjective, noun, number);
+        int number = RANDOM.nextInt(10000); // 0000~9999
+        return String.format("%s%s#%04d", adjective, noun, number);
     }
 }

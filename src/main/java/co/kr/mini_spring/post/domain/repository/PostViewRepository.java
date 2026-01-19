@@ -10,11 +10,4 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface PostViewRepository extends JpaRepository<PostView, PostView.PostViewId> {
-
-    @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select pv from PostView pv where pv.id.memberId = :memberId and pv.id.postId = :postId")
-    Optional<PostView> findByMemberIdAndPostIdWithLock(
-            @Param("memberId") Long memberId,
-            @Param("postId") Long postId
-    );
 }

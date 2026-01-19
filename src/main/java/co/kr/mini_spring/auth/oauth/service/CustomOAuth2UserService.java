@@ -112,7 +112,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         }
 
         if (StringUtils.hasText(attributes.getName())) {
-            member.update(attributes.getName(), member.getNickname(), member.getProfileImageUrl());
+            member.update(attributes.getName(), member.getNickname());
         }
 
         // 이메일로 찾았으나 소셜 정보가 비어 있다면 연결해 둔다.

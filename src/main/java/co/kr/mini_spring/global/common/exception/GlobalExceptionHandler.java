@@ -115,6 +115,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * 파일 업로드 용량 초과 처리.
+     */
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    protected ResponseEntity<ApiResponse<Void>> handleMaxUploadSizeExceededException(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        log.warn("[BadRequest] maxUploadSizeExceeded={}", e.getMessage());
+        ApiResponse<Void> body = ApiResponse.fail(ResponseCode.FILE_SIZE_EXCEEDED);
+        return new ResponseEntity<>(body, ResponseCode.FILE_SIZE_EXCEEDED.getHttpStatus());
+    }
+
+    /**
      * 그 외 처리하지 않은 모든 예외
      */
     @ExceptionHandler(Exception.class)

@@ -1,5 +1,6 @@
-package co.kr.mini_spring.global.common.exception;
+package co.kr.mini_spring.member.exception;
 
+import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 
 /**

@@ -1,5 +1,6 @@
 package co.kr.mini_spring.member.domain;
 
+import co.kr.mini_spring.global.common.file.domain.ImageFile;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -37,8 +38,9 @@ public class Member {
     @Column(nullable = false, length = 100, unique = true)
     private String nickname;
 
-    @Column(name = "profile_image_url", length = 500)
-    private String profileImageUrl;
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "profile_image_id")
+    private ImageFile profileImage;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -68,7 +70,7 @@ public class Member {
                   String passwordHash,
                   String name,
                   String nickname,
-                  String profileImageUrl,
+                  ImageFile profileImage,
                   MemberRole role,
                   MemberStatus status,
                   MemberProvider oauthProvider,
@@ -77,18 +79,25 @@ public class Member {
         this.passwordHash = passwordHash;
         this.name = name;
         this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
+        this.profileImage = profileImage;
         this.role = role == null ? MemberRole.USER : role;
         this.status = status == null ? MemberStatus.ACTIVE : status;
         this.oauthProvider = oauthProvider == null ? MemberProvider.LOCAL : oauthProvider;
         this.oauthId = oauthId;
     }
 
-    public Member update(String name, String nickname, String profileImageUrl) {
+    public Member update(String name, String nickname) {
         this.name = name;
         this.nickname = nickname;
-        this.profileImageUrl = profileImageUrl;
         return this;
+    }
+
+    public void updateProfileImage(ImageFile profileImage) {
+        this.profileImage = profileImage;
+    }
+
+    public String getProfileImageUrl(String defaultImageUrl) {
+        return profileImage != null ? profileImage.getFullUrl() : defaultImageUrl;
     }
 
     public void changeRole(MemberRole role) {
