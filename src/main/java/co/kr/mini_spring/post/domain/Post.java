@@ -33,7 +33,7 @@ public class Post {
     private String title;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "LONGTEXT")
     private String content;
 
     @Column(name = "view_count")
@@ -80,11 +80,12 @@ public class Post {
     @Builder.Default
     private Set<PostHashtag> postHashtags = new HashSet<>();
 
-    //== 편의 메서드 ==//
+    // == 편의 메서드 ==//
 
     /**
      * 게시글의 제목과 내용을 업데이트합니다.
-     * @param title 새로운 제목
+     * 
+     * @param title   새로운 제목
      * @param content 새로운 내용
      */
     public void update(String title, String content) {
