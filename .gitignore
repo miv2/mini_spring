@@ -31,3 +31,8 @@ bin/
 # Querydsl
 /src/main/generated/
 /src/test/generated/
+
+# Documentation & Tracking
+AGENTS.md
+API_DOCS.md
+PROGRESS.md
