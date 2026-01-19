@@ -54,3 +54,7 @@ jwt:
   secret: ${TEST_JWT_SECRET:testSecretKeytestSecretKeytestSecretKeytestSecretKey}
   access-token-expiration: 3600000
   refresh-token-expiration: 604800000
+
+file:
+  upload-dir: build/tmp/test-uploads/
+  default-profile-image: /uploads/default-profile.png

@@ -33,6 +33,10 @@ bin/
 /src/test/generated/
 
 # Documentation & Tracking
-AGENTS.md
-API_DOCS.md
 PROGRESS.md
+
+# Local settings
+src/main/resources/application-local.yml
+
+# Help
+HELP.md

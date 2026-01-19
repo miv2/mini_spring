@@ -1,0 +1,67 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://localhost:3306/app_server?useSSL=false&serverTimezone=Asia/Seoul}
+    driver-class-name: org.mariadb.jdbc.Driver
+    username: ${SPRING_DATASOURCE_USERNAME:miv}
+    password: ${SPRING_DATASOURCE_PASSWORD:1234}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # 데이터 보호를 위해 validate 권장
+    properties:
+      hibernate:
+        format_sql: false # 운영 로그 최소화
+
+  security:
+    oauth2:
+      client:
+        provider:
+          google:
+            authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-name-attribute: sub
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+            redirect-uri: "${APP_BASE_URL}/login/oauth2/code/google"
+          kakao:
+            client-id: ${KAKAO_CLIENT_ID}
+            client-secret: ${KAKAO_CLIENT_SECRET}
+            scope:
+              - account_email
+            client-name: Kakao
+            authorization-grant-type: authorization_code
+            redirect-uri: "${APP_BASE_URL}/login/oauth2/code/{registrationId}" # 원격 서버 IP 적용
+            client-authentication-method: client_secret_post
+
+logging:
+  level:
+    co.kr.mini_spring: INFO # 운영 로그 레벨
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: OFF
+
+jwt:
+  secret: ${JWT_SECRET}
+
+file:
+  upload-dir: /app/uploads/ # 리눅스 절대 경로
+  default-profile-image: /uploads/default-profile.png
