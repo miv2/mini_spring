@@ -8,6 +8,7 @@
 out
 bin
 build
+!build/libs/
 logs
 *.log
 docker-compose.yml
