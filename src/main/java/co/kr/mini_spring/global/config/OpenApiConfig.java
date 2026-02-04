@@ -63,6 +63,7 @@ public class OpenApiConfig {
         return GroupedOpenApi.builder()
                 .group("유저 API")
                 .pathsToMatch("/api/**")
+                .pathsToExclude("/api/v1/admin/**")
                 .build();
     }
 
