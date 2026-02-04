@@ -65,6 +65,7 @@ public class SecurityConfig {
                                 "/error",
                                 "/favicon.ico",
                                 "/.well-known/**", // Chrome DevTools 관련 경로 허용
+                                "/actuator/**",
                                 "/v3/api-docs/**",
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",

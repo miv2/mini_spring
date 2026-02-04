@@ -43,7 +43,10 @@ public class OpenApiConfig {
                         .version("v1")
                         .description("게시글/댓글 플랫폼 REST API")
                         .license(new License().name("MIT")))
-                .servers(List.of(new Server().url("http://localhost:8081")))
+                .servers(List.of(
+                        new Server().url("https://minispring.duckdns.org").description("Production Server"),
+                        new Server().url("http://localhost:8081").description("Local Development Server")
+                ))
                 .components(new Components()
                         .addSecuritySchemes(BEARER_SCHEME, new io.swagger.v3.oas.models.security.SecurityScheme()
                                 .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
