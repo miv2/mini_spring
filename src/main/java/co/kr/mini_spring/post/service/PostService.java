@@ -1,47 +1,46 @@
 package co.kr.mini_spring.post.service;
 
+import co.kr.mini_spring.global.common.exception.BusinessException;
+import co.kr.mini_spring.global.common.response.CursorResponse;
+import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.Member;
+import co.kr.mini_spring.member.domain.repository.MemberRepository;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.PostLike;
-import co.kr.mini_spring.post.domain.PostView;
-import co.kr.mini_spring.member.domain.repository.MemberRepository;
 import co.kr.mini_spring.post.domain.repository.PostLikeRepository;
-import co.kr.mini_spring.post.domain.repository.PostRepository;
 import co.kr.mini_spring.post.domain.repository.PostQueryRepository;
-import co.kr.mini_spring.post.domain.repository.PostViewQueryRepository;
+import co.kr.mini_spring.post.domain.repository.PostRepository;
 import co.kr.mini_spring.post.dto.request.PostCreateRequest;
 import co.kr.mini_spring.post.dto.request.PostUpdateRequest;
 import co.kr.mini_spring.post.dto.response.PostResponse;
 import co.kr.mini_spring.post.dto.response.PostSummaryResponse;
-import co.kr.mini_spring.global.common.exception.BusinessException;
-import co.kr.mini_spring.global.common.response.PageResponse;
-import co.kr.mini_spring.global.common.response.ResponseCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PostService {
-
     private final PostRepository postRepository;
-    private final PostQueryRepository postQueryRepository; // 추가
+    private final PostQueryRepository postQueryRepository;
     private final PostLikeRepository postLikeRepository;
-    private final PostViewQueryRepository postViewQueryRepository; // 변경
     private final MemberRepository memberRepository;
     private final HashtagService hashtagService;
+    private final RedisTemplate<String, Object> redisTemplate;
 
     private static final Duration VIEW_COUNT_INTERVAL = Duration.ofHours(1);
 
+    /**
+     * 게시글 작성 (초기 조회수 0)
+     */
     @Transactional
     public PostResponse createPost(PostCreateRequest request, Member member) {
         requireAuthenticated(member);
@@ -52,16 +51,18 @@ public class PostService {
                 .build();
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
-        return new PostResponse(post, member);
+        return new PostResponse(post, member, 0);
     }
 
+    /**
+     * 게시글 상세 조회 (조회수 중복 방지 로직 포함)
+     */
     @Transactional
     public PostResponse getPost(Long postId, Member currentUser) {
         Post post = postQueryRepository.findByIdWithAllRelations(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
-        if (post.getMember() == null) {
-            throw new BusinessException(ResponseCode.POST_NOT_FOUND);
-        }
+        if (post.getMember() == null) throw new BusinessException(ResponseCode.POST_NOT_FOUND);
+        
         Integer viewCountOverride = null;
         if (currentUser != null && updateViewCount(post, currentUser)) {
             viewCountOverride = postQueryRepository.findViewCountById(post.getId());
@@ -69,6 +70,9 @@ public class PostService {
         return new PostResponse(post, currentUser, viewCountOverride);
     }
 
+    /**
+     * 게시글 수정 (작성자 본인만 가능)
+     */
     @Transactional
     public PostResponse updatePost(Long postId, PostUpdateRequest request, Member member) {
         requireAuthenticated(member);
@@ -77,9 +81,12 @@ public class PostService {
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_UPDATE_POST);
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
-        return new PostResponse(post, member);
+        return new PostResponse(post, member, null);
     }
 
+    /**
+     * 게시글 삭제 (논리 삭제)
+     */
     @Transactional
     public void deletePost(Long postId, Member member) {
         requireAuthenticated(member);
@@ -89,6 +96,9 @@ public class PostService {
         post.delete();
     }
 
+    /**
+     * 게시글 좋아요 추가 (비관적 락 사용)
+     */
     @Transactional
     public void addLike(Long postId, Long memberId) {
         if (memberId == null) throw new BusinessException(ResponseCode.UNAUTHENTICATED);
@@ -96,16 +106,18 @@ public class PostService {
         
         Post post = postQueryRepository.findByIdWithPessimisticLock(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
-        Member memberProxy = memberRepository.getReferenceById(memberId);
         PostLike newLike = PostLike.builder()
                 .id(new PostLike.PostLikeId(memberId, postId))
-                .member(memberProxy)
+                .member(memberRepository.getReferenceById(memberId))
                 .post(post)
                 .build();
         postLikeRepository.save(newLike);
         post.increaseLikeCount();
     }
 
+    /**
+     * 게시글 좋아요 취소
+     */
     @Transactional
     public void removeLike(Long postId, Long memberId) {
         if (memberId == null) throw new BusinessException(ResponseCode.UNAUTHENTICATED);
@@ -118,45 +130,35 @@ public class PostService {
         post.decreaseLikeCount();
     }
 
-    public PageResponse<PostSummaryResponse> getPublishedPosts(Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
-        Page<Post> postPage = postQueryRepository.findAllByPublished(true, pageable, keyword, hashtags, authorId);
-        return new PageResponse<>(postPage.map(PostSummaryResponse::new));
+    /**
+     * 게시글 목록 조회 (커서 기반 페이징)
+     */
+    public CursorResponse<PostSummaryResponse> getPublishedPosts(Long lastId, int size, String keyword, List<String> hashtags, Long authorId) {
+        List<Post> posts = postQueryRepository.findAllByPublishedCursor(true, lastId, size, keyword, hashtags, authorId);
+        boolean hasNext = posts.size() > size;
+        List<Post> content = hasNext ? posts.subList(0, size) : posts;
+        Long nextCursor = content.isEmpty() ? null : content.get(content.size() - 1).getId();
+        
+        List<PostSummaryResponse> responseContent = content.stream()
+                .map(PostSummaryResponse::new)
+                .collect(Collectors.toList());
+        return new CursorResponse<>(responseContent, nextCursor, hasNext);
     }
 
+    /**
+     * Redis 기반 조회수 업데이트 (1시간 쿨타임)
+     */
     private boolean updateViewCount(Post post, Member currentUser) {
         Long memberId = currentUser.getId();
-        if (memberId == null) return false;
+        if (memberId == null || (post.getMember() != null && Objects.equals(post.getMember().getId(), memberId))) return false;
 
-        LocalDateTime now = LocalDateTime.now();
-        PostView postView = postViewQueryRepository.findByMemberIdAndPostIdWithLock(memberId, post.getId()).orElse(null);
-
-        if (postView == null) {
-            PostView newView = PostView.builder()
-                    .id(new PostView.PostViewId(memberId, post.getId()))
-                    .member(memberRepository.getReferenceById(memberId))
-                    .post(postRepository.getReferenceById(post.getId()))
-                    .lastViewedAt(now)
-                    .build();
-            try {
-                // PostViewRepository는 단순 CRUD이므로 기존 인터페이스 사용 가능하지만 일관성을 위해 QueryRepository로 갈 수도 있음
-                // 여기서는 생략하고 직접 저장
-                incrementViewCount(post.getId());
-                return true;
-            } catch (DataIntegrityViolationException ignored) {}
-            return false;
-        }
-
-        if (postView.isViewCountable(now, VIEW_COUNT_INTERVAL)) {
-            postView.updateLastViewedAt(now);
-            postView.increaseViewCount();
-            incrementViewCount(post.getId());
+        String viewKey = "post:view:member:" + memberId + ":post:" + post.getId();
+        if (Boolean.FALSE.equals(redisTemplate.hasKey(viewKey))) {
+            redisTemplate.opsForValue().set(viewKey, "viewed", VIEW_COUNT_INTERVAL);
+            postQueryRepository.incrementViewCount(post.getId());
             return true;
         }
         return false;
-    }
-
-    private void incrementViewCount(Long postId) {
-        postQueryRepository.incrementViewCount(postId);
     }
 
     private void requireAuthenticated(Member member) {

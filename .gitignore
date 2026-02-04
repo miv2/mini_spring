@@ -33,7 +33,7 @@ bin/
 /src/test/generated/
 
 # Documentation & Tracking
-PROGRESS.md
+GEMINI.md
 
 # Local settings
 src/main/resources/application-local.yml

@@ -33,7 +33,7 @@ public class Post {
     private String title;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "LONGTEXT")
+    @Column(nullable = false)
     private String content;
 
     @Column(name = "view_count")
@@ -79,8 +79,6 @@ public class Post {
     @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private Set<PostHashtag> postHashtags = new HashSet<>();
-
-    // == 편의 메서드 ==//
 
     /**
      * 게시글의 제목과 내용을 업데이트합니다.

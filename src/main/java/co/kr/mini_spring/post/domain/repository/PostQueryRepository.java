@@ -66,46 +66,43 @@ public class PostQueryRepository {
     }
 
     /**
-     * 게시글 목록을 동적 조건에 따라 페이징 조회합니다.
-     * - ID를 먼저 조회한 뒤 Fetch Join을 수행하는 2단계 페이징 기법을 사용하여 성능을 최적화합니다.
+     * 게시글 목록을 커서(Keyset) 기반 페이징으로 조회합니다.
+     * - lastId를 기준으로 이전 데이터는 무시하고 다음 데이터부터 조회하여 성능을 최적화합니다.
+     * - size + 1을 조회하여 다음 페이지 존재 여부를 판단합니다.
      */
-    public Page<Post> findAllByPublished(boolean published, Pageable pageable, String keyword, List<String> hashtagsFilter, Long authorId) {
-        List<OrderSpecifier<?>> orderSpecifiers = buildOrderSpecifiers(pageable);
-
+    public List<Post> findAllByPublishedCursor(boolean published, Long lastId, int size, String keyword, List<String> hashtagsFilter, Long authorId) {
         BooleanExpression conditions = post.published.eq(published)
                 .and(post.member.isNotNull())
+                .and(ltPostId(lastId)) // 커서 조건 추가
                 .and(applyAuthor(authorId))
                 .and(applyKeyword(keyword))
                 .and(applyHashtagFilter(hashtagsFilter));
 
-        // 1. 커버링 인덱스 스타일로 ID만 먼저 페이징 조회
+        // 1. 커버링 인덱스 스타일로 ID만 먼저 조회 (size + 1)
         List<Long> ids = queryFactory.select(post.id)
                 .from(post)
-                .leftJoin(post.member, member)
                 .where(conditions)
-                .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
+                .orderBy(post.id.desc()) // 최신순 고정 (커서 방식의 일반적 정석)
+                .limit(size + 1)
                 .fetch();
 
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+
         // 2. 조회된 ID들에 해당하는 실데이터 Fetch Join 조회
-        List<Post> posts = ids.isEmpty() ? List.of() :
-                queryFactory.selectFrom(post)
-                        .leftJoin(post.member, member).fetchJoin()
-                        .leftJoin(post.postHashtags, postHashtag).fetchJoin()
-                        .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
-                        .where(post.id.in(ids))
-                        .distinct()
-                        .orderBy(orderSpecifiers.toArray(new OrderSpecifier[0]))
-                        .fetch();
+        return queryFactory.selectFrom(post)
+                .leftJoin(post.member, member).fetchJoin()
+                .leftJoin(post.postHashtags, postHashtag).fetchJoin()
+                .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
+                .where(post.id.in(ids))
+                .distinct()
+                .orderBy(post.id.desc())
+                .fetch();
+    }
 
-        // 3. 전체 개수 조회
-        Long total = queryFactory.select(post.count())
-                .from(post)
-                .where(conditions)
-                .fetchOne();
-
-        return new PageImpl<>(posts, pageable, total == null ? 0 : total);
+    private BooleanExpression ltPostId(Long lastId) {
+        return lastId == null ? null : post.id.lt(lastId);
     }
 
     /**

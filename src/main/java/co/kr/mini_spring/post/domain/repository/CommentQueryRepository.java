@@ -26,33 +26,24 @@ public class CommentQueryRepository {
     private static final QMember member = QMember.member;
 
     /**
-     * 특정 게시글의 최상위 댓글 목록을 페이징 조회합니다.
-     * - 작성자 정보(Member)를 Fetch Join하여 회원 정보를 가져올 때 발생하는 N+1 문제를 방지합니다.
-     * - 대댓글(children)은 엔티티 설정에 따라 지연 로딩됩니다.
+     * 특정 게시글의 최상위 댓글 목록을 커서 기반 페이징으로 조회합니다.
      */
-    public Page<Comment> findAllTopLevelCommentsByPostId(Long postId, Pageable pageable) {
-        List<Comment> content = queryFactory
+    public List<Comment> findAllTopLevelCommentsByPostIdCursor(Long postId, Long lastId, int size) {
+        return queryFactory
                 .selectFrom(comment)
                 .leftJoin(comment.member, member).fetchJoin()
                 .where(
                         comment.post.id.eq(postId),
-                        comment.parent.isNull() // 최상위 댓글만 필터링
+                        comment.parent.isNull(),
+                        ltCommentId(lastId)
                 )
-                .orderBy(comment.createdAt.desc())
-                .offset(pageable.getOffset())
-                .limit(pageable.getPageSize())
+                .orderBy(comment.id.desc())
+                .limit(size + 1)
                 .fetch();
+    }
 
-        Long total = queryFactory
-                .select(comment.count())
-                .from(comment)
-                .where(
-                        comment.post.id.eq(postId),
-                        comment.parent.isNull()
-                )
-                .fetchOne();
-
-        return new PageImpl<>(content, pageable, total == null ? 0 : total);
+    private com.querydsl.core.types.dsl.BooleanExpression ltCommentId(Long lastId) {
+        return lastId == null ? null : comment.id.lt(lastId);
     }
 
     /**

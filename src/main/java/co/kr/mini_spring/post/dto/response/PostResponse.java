@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Getter
 @JsonPropertyOrder({
         "id", "title", "content", "viewCount", "likeCount",
-        "memberId", "memberName", "isOwner", "hashtags", "comments", "createdAt", "updatedAt"
+        "memberId", "memberName", "isOwner", "hashtags", "createdAt", "updatedAt"
 })
 public class PostResponse {
 
@@ -26,9 +26,8 @@ public class PostResponse {
     private final int likeCount;
     private final Long memberId;
     private final String memberName;
-    private final boolean isOwner; // 작성자 여부 필드 추가
+    private final boolean isOwner;
     private final Set<String> hashtags;
-    private final List<CommentResponse> comments;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private final LocalDateTime createdAt;
@@ -36,19 +35,10 @@ public class PostResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private final LocalDateTime updatedAt;
 
-    // 비로그인 사용자를 위한 생성자
-    public PostResponse(Post post) {
-        this(post, null, null);
-    }
-
-    // 로그인한 사용자를 위한 생성자
-    public PostResponse(Post post, Member currentUser) {
-        this(post, currentUser, null);
-    }
-
     /**
-     * 로그인 사용자 + 조회수 보정이 필요한 경우 사용.
-     * - 조회수는 DB에서 원자적으로 증가시키기 때문에, 응답에는 최신 값을 별도로 주입할 수 있다.
+     * 게시글 상세 응답 생성자
+     * @param post 게시글 엔티티
+     * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
      */
     public PostResponse(Post post, Member currentUser, Integer viewCountOverride) {
         this.id = post.getId();
@@ -62,17 +52,10 @@ public class PostResponse {
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
 
-        // isOwner 설정
         this.isOwner = (currentUser != null && author != null) && Objects.equals(author.getId(), currentUser.getId());
 
         this.hashtags = post.getPostHashtags().stream()
                 .map(postHashtag -> postHashtag.getHashtag().getName())
                 .collect(Collectors.toSet());
-
-        // 댓글 목록을 CommentResponse DTO로 변환 (currentUser 정보 전달)
-        this.comments = post.getComments().stream()
-                .filter(comment -> comment.getParent() == null) // 최상위 댓글만 필터링
-                .map(comment -> new CommentResponse(comment, currentUser))
-                .collect(Collectors.toList());
     }
 }
