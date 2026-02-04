@@ -26,6 +26,15 @@ spring:
           time_zone: Asia/Seoul
     open-in-view: false
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: always
+
 
 jwt:
   access-token-expiration: 3600000  # 1시간
