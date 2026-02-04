@@ -50,6 +50,7 @@ public enum ResponseCode {
     FILE_SIZE_EXCEEDED("F003", "파일 크기가 제한을 초과했습니다.", HttpStatus.PAYLOAD_TOO_LARGE),
     FILE_UPLOAD_ERROR("F004", "파일 업로드 중 서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
     FILE_DELETE_ERROR("F005", "파일 삭제 중 서버 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_FILE_SIGNATURE("F006", "이미지 시그니처가 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
     ;
 
     private final String code;

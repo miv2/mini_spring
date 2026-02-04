@@ -29,6 +29,9 @@ public class FileService {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
+    @Value("${file.public-base-url:/uploads/}")
+    private String publicBaseUrl;
+
     private final ImageFileRepository imageFileRepository;
 
     private static final List<String> ALLOWED_IMAGE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
@@ -45,7 +48,8 @@ public class FileService {
         String datePath = createDatePath();
         String originalName = file.getOriginalFilename();
         String extension = extractExtension(originalName);
-        String storedName = UUID.randomUUID().toString() + "." + extension;
+        String storedName = UUID.randomUUID() + "." + extension;
+        String publicPath = buildPublicPath(datePath);
 
         // 3. 물리적 디렉토리 생성
         Path targetDir = Paths.get(uploadDir, datePath);
@@ -62,15 +66,24 @@ public class FileService {
         }
 
         // 5. DB 메타데이터 저장
-        ImageFile imageFile = ImageFile.builder()
-                .originName(originalName)
-                .storedName(storedName)
-                .filePath("/uploads/" + datePath + "/")
-                .fileSize(file.getSize())
-                .extension(extension)
-                .build();
+        try {
+            ImageFile imageFile = ImageFile.builder()
+                    .originName(originalName)
+                    .storedName(storedName)
+                    .filePath(publicPath)
+                    .fileSize(file.getSize())
+                    .extension(extension)
+                    .build();
 
-        return imageFileRepository.save(imageFile);
+            return imageFileRepository.save(imageFile);
+        } catch (RuntimeException e) {
+            try {
+                Files.deleteIfExists(targetPath);
+            } catch (IOException ex) {
+                log.warn("[파일 정리 실패] path={}, error={}", targetPath, ex.getMessage());
+            }
+            throw e;
+        }
     }
 
     /**
@@ -89,6 +102,10 @@ public class FileService {
         String contentType = file.getContentType();
         if (contentType == null || !contentType.startsWith("image/")) {
             throw new FileException(ResponseCode.INVALID_FILE_TYPE, "이미지 파일만 업로드 가능합니다.");
+        }
+
+        if (!isValidImageSignature(file, extension)) {
+            throw new FileException(ResponseCode.INVALID_FILE_SIGNATURE);
         }
     }
 
@@ -110,6 +127,45 @@ public class FileService {
         } catch (IOException e) {
             throw new FileException(ResponseCode.FILE_UPLOAD_ERROR, "디렉토리 생성에 실패했습니다.");
         }
+    }
+
+    /**
+     * 공개 경로를 생성합니다. (항상 / 로 끝나도록 보정)
+     */
+    private String buildPublicPath(String datePath) {
+        String base = publicBaseUrl == null ? "/uploads/" : publicBaseUrl.trim();
+        if (!base.startsWith("/")) {
+            base = "/" + base;
+        }
+        if (!base.endsWith("/")) {
+            base = base + "/";
+        }
+        return base + datePath + "/";
+    }
+
+    /**
+     * 이미지 시그니처(매직넘버) 검사
+     */
+    private boolean isValidImageSignature(MultipartFile file, String extension) {
+        byte[] header = new byte[12];
+        try (var in = file.getInputStream()) {
+            int read = in.read(header);
+            if (read < 8) return false;
+        } catch (IOException e) {
+            return false;
+        }
+
+        String ext = extension == null ? "" : extension.toLowerCase();
+        return switch (ext) {
+            case "jpg", "jpeg" -> (header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8 && (header[2] & 0xFF) == 0xFF;
+            case "png" -> (header[0] & 0xFF) == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47
+                    && header[4] == 0x0D && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A;
+            case "gif" -> header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38
+                    && (header[4] == 0x37 || header[4] == 0x39) && header[5] == 0x61;
+            case "webp" -> header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
+                    && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50;
+            default -> false;
+        };
     }
 
     /**
