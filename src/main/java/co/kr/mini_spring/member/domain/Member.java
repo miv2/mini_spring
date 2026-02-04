@@ -1,6 +1,6 @@
 package co.kr.mini_spring.member.domain;
 
-import co.kr.mini_spring.global.common.file.domain.ImageFile;
+import co.kr.mini_spring.global.common.file.domain.StoredFile;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -40,7 +40,7 @@ public class Member {
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "profile_image_id")
-    private ImageFile profileImage;
+    private StoredFile profileImage;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -70,7 +70,7 @@ public class Member {
                   String passwordHash,
                   String name,
                   String nickname,
-                  ImageFile profileImage,
+                  StoredFile profileImage,
                   MemberRole role,
                   MemberStatus status,
                   MemberProvider oauthProvider,
@@ -92,7 +92,7 @@ public class Member {
         return this;
     }
 
-    public void updateProfileImage(ImageFile profileImage) {
+    public void updateProfileImage(StoredFile profileImage) {
         this.profileImage = profileImage;
     }
 

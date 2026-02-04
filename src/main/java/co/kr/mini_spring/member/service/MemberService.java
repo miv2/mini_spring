@@ -1,6 +1,6 @@
 package co.kr.mini_spring.member.service;
 
-import co.kr.mini_spring.global.common.file.domain.ImageFile;
+import co.kr.mini_spring.global.common.file.domain.StoredFile;
 import co.kr.mini_spring.global.common.file.service.FileService;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.common.exception.BusinessException;
@@ -117,7 +117,7 @@ public class MemberService {
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
 
         // 1. 새 이미지 파일 저장
-        ImageFile imageFile = fileService.uploadImage(file);
+        StoredFile imageFile = fileService.uploadImage(file);
 
         // 2. 멤버 엔티티의 프로필 이미지 업데이트
         member.updateProfileImage(imageFile);

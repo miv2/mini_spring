@@ -1,3 +1,20 @@
+CREATE TABLE file
+(
+    id           BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '파일 고유 ID',
+    origin_name  VARCHAR(255) NOT NULL COMMENT '원본 파일명',
+    stored_name  VARCHAR(255) NOT NULL COMMENT '저장 파일명',
+    file_path    VARCHAR(255) NOT NULL COMMENT '저장 경로',
+    file_size    BIGINT       NOT NULL COMMENT '파일 크기',
+    extension    VARCHAR(10)  NOT NULL COMMENT '확장자',
+    content_type VARCHAR(100) NULL COMMENT 'MIME 타입',
+    type         ENUM ('IMAGE', 'OTHER') DEFAULT 'OTHER' NOT NULL COMMENT '파일 타입',
+    created_at   DATETIME(6)  NOT NULL COMMENT '생성 일시',
+
+    UNIQUE KEY uk_stored_name (stored_name)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_general_ci COMMENT ='파일';
+
 CREATE TABLE member
 (
     id                BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '회원 고유 ID',
@@ -7,16 +24,18 @@ CREATE TABLE member
     nickname          VARCHAR(100)                                               NOT NULL UNIQUE COMMENT '닉네임',
     oauth_provider    ENUM ('LOCAL', 'GOOGLE', 'KAKAO', 'NAVER') DEFAULT 'LOCAL' NOT NULL COMMENT '로그인 제공자',
     oauth_id          VARCHAR(255)                                               NULL UNIQUE COMMENT '소셜 서비스의 고유 유저 ID',
-    profile_image_url VARCHAR(500)                                               NULL COMMENT '프로필 이미지 URL',
+    profile_image_id  BIGINT                                                     NULL COMMENT '프로필 이미지 ID',
     role              ENUM ('USER', 'ADMIN')                     DEFAULT 'USER' COMMENT '회원 역할',
     status            ENUM ('ACTIVE', 'SUSPENDED', 'WITHDRAWN')  DEFAULT 'ACTIVE' COMMENT '계정 상태',
     created_at        TIMESTAMP(3)                               DEFAULT CURRENT_TIMESTAMP(3) COMMENT '가입 일시',
-    updated_at        TIMESTAMP(3)                               DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '정보 수정 일시',
+    updated_at        TIMESTAMP(3)                               DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '수정 일시',
 
-    -- 인덱스 추가
     INDEX idx_oauth_lookup (oauth_provider, oauth_id) COMMENT '소셜 유저 로그인 조회용',
     INDEX idx_status_created (status, created_at),
-    INDEX idx_nickname (nickname)
+    INDEX idx_nickname (nickname),
+
+    CONSTRAINT fk_member_profile_image
+        FOREIGN KEY (profile_image_id) REFERENCES file (id)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='회원 정보';
@@ -30,13 +49,13 @@ CREATE TABLE post
     like_count    INT          DEFAULT 0 COMMENT '좋아요 수 (캐시)',
     comment_count INT          DEFAULT 0 COMMENT '댓글 수 (캐시)',
     is_published  BOOLEAN      DEFAULT TRUE COMMENT '공개 여부',
-    member_id     BIGINT       NULL COMMENT '작성자 ID (탈퇴 시 NULL)', -- NULL 허용으로 수정
+    member_id     BIGINT       NULL COMMENT '작성자 ID (탈퇴 시 NULL)',
     created_at    TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3) COMMENT '생성 일시',
     updated_at    TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3) COMMENT '수정 일시',
 
     CONSTRAINT fk_post_member
         FOREIGN KEY (member_id) REFERENCES member (id)
-            ON DELETE SET NULL,                                   -- SET NULL로 수정
+            ON DELETE SET NULL,
 
     INDEX idx_member_published (member_id, is_published) COMMENT '사용자의 게시글 관리용',
     INDEX idx_published_created (is_published, created_at DESC) COMMENT '메인 피드 조회용',
@@ -46,13 +65,11 @@ CREATE TABLE post
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='게시글';
 
--- hashtag, post_hashtag 테이블은 기존과 동일하므로 생략 가능 (필요 시 포함)
-
 CREATE TABLE comment
 (
     id                BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '댓글 고유 ID',
     content           TEXT   NOT NULL COMMENT '댓글 내용',
-    member_id         BIGINT NULL COMMENT '작성자 ID (탈퇴 시 NULL)', -- NULL 허용으로 수정
+    member_id         BIGINT NULL COMMENT '작성자 ID (탈퇴 시 NULL)',
     post_id           BIGINT NOT NULL COMMENT '게시글 ID',
     parent_comment_id BIGINT NULL COMMENT '부모 댓글 ID',
     depth             TINYINT      DEFAULT 0 COMMENT '댓글 깊이 (0: 일반, 1: 대댓글)',
@@ -66,7 +83,7 @@ CREATE TABLE comment
 
     CONSTRAINT fk_comment_member
         FOREIGN KEY (member_id) REFERENCES member (id)
-            ON DELETE SET NULL,                                 -- SET NULL로 수정
+            ON DELETE SET NULL,
     CONSTRAINT fk_comment_post
         FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE,
     CONSTRAINT fk_comment_parent
@@ -79,7 +96,6 @@ CREATE TABLE comment
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='댓글';
-
 
 CREATE TABLE hashtag
 (
@@ -130,7 +146,6 @@ CREATE TABLE post_like
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci COMMENT ='게시글 좋아요';
 
-
 CREATE TABLE post_view
 (
     member_id      BIGINT       NOT NULL COMMENT '회원 ID',
@@ -142,7 +157,6 @@ CREATE TABLE post_view
     PRIMARY KEY (member_id, post_id) COMMENT '복합 기본키',
     INDEX idx_post_id (post_id) COMMENT '게시글 조회 기록용',
     INDEX idx_last_viewed_at (last_viewed_at) COMMENT '오래된 기록 정리용',
-
 
     CONSTRAINT fk_post_view_member
         FOREIGN KEY (member_id) REFERENCES member (id) ON DELETE CASCADE,

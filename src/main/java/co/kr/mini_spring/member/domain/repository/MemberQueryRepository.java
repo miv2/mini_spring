@@ -1,6 +1,6 @@
 package co.kr.mini_spring.member.domain.repository;
 
-import co.kr.mini_spring.global.common.file.domain.QImageFile;
+import co.kr.mini_spring.global.common.file.domain.QStoredFile;
 import co.kr.mini_spring.member.domain.Member;
 import co.kr.mini_spring.member.domain.QMember;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -25,7 +25,7 @@ public class MemberQueryRepository {
      */
     public Optional<Member> findByEmailWithProfileImage(String email) {
         QMember member = QMember.member;
-        QImageFile profileImage = QImageFile.imageFile;
+        QStoredFile profileImage = QStoredFile.storedFile;
 
         return Optional.ofNullable(
                 queryFactory.selectFrom(member)
@@ -41,7 +41,7 @@ public class MemberQueryRepository {
      */
     public Optional<Member> findByIdWithProfileImage(Long id) {
         QMember member = QMember.member;
-        QImageFile profileImage = QImageFile.imageFile;
+        QStoredFile profileImage = QStoredFile.storedFile;
 
         return Optional.ofNullable(
                 queryFactory.selectFrom(member)

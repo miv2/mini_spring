@@ -1,7 +1,8 @@
 package co.kr.mini_spring.global.common.file.service;
 
 import co.kr.mini_spring.global.common.exception.FileException;
-import co.kr.mini_spring.global.common.file.domain.ImageFile;
+import co.kr.mini_spring.global.common.file.domain.FileType;
+import co.kr.mini_spring.global.common.file.domain.StoredFile;
 import co.kr.mini_spring.global.common.file.domain.repository.ImageFileRepository;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import lombok.RequiredArgsConstructor;
@@ -40,7 +41,7 @@ public class FileService {
      * 이미지를 업로드하고 메타데이터를 DB에 저장합니다.
      */
     @Transactional
-    public ImageFile uploadImage(MultipartFile file) {
+    public StoredFile uploadImage(MultipartFile file) {
         // 1. 유효성 검사
         validateImage(file);
 
@@ -67,12 +68,14 @@ public class FileService {
 
         // 5. DB 메타데이터 저장
         try {
-            ImageFile imageFile = ImageFile.builder()
+            StoredFile imageFile = StoredFile.builder()
                     .originName(originalName)
                     .storedName(storedName)
                     .filePath(publicPath)
                     .fileSize(file.getSize())
                     .extension(extension)
+                    .contentType(file.getContentType())
+                    .type(FileType.IMAGE)
                     .build();
 
             return imageFileRepository.save(imageFile);
@@ -84,6 +87,20 @@ public class FileService {
             }
             throw e;
         }
+    }
+
+    /**
+     * 여러 이미지를 업로드하고 메타데이터를 DB에 저장합니다.
+     */
+    @Transactional
+    public List<StoredFile> uploadImages(List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
+            throw new FileException(ResponseCode.INVALID_INPUT_VALUE, "업로드할 파일이 없습니다.");
+        }
+
+        return files.stream()
+                .map(this::uploadImage)
+                .toList();
     }
 
     /**
