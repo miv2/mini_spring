@@ -83,8 +83,8 @@ jobs:
           RETRY_COUNT=0
           
           while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
-            # 앱의 응답 확인 (200 OK 또는 401 Unauthorized가 오면 앱이 뜬 것으로 간주)
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/actuator/health || true)
+            # 앱의 응답 확인 (Nginx 리다이렉션을 피하기 위해 8081 포트로 직접 확인)
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/actuator/health || true)
             
             if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "401" ]; then
               echo "✓ Application is healthy! (Status: $HTTP_STATUS)"
