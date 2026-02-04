@@ -79,12 +79,23 @@ jobs:
           docker compose up -d --force-recreate app
           
           echo "=== 3. Health Checking... ==="
+          # 컨테이너가 실행 상태가 될 때까지 잠시 대기
+          READY_RETRY=10
+          READY_COUNT=0
+          while [ $READY_COUNT -lt $READY_RETRY ]; do
+            APP_CID=$(docker compose ps -q app)
+            if [ -n "$APP_CID" ] && [ "$(docker inspect -f '{{.State.Running}}' "$APP_CID" 2>/dev/null || echo false)" = "true" ]; then
+              break
+            fi
+            READY_COUNT=$((READY_COUNT+1))
+            sleep 3
+          done
           MAX_RETRY=15
           RETRY_COUNT=0
           
           while [ $RETRY_COUNT -lt $MAX_RETRY ]; do
-            # 앱의 응답 확인 (Nginx 리다이렉션을 피하기 위해 8081 포트로 직접 확인)
-            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/actuator/health || true)
+            # 앱의 응답 확인 (컨테이너 내부에서 직접 확인)
+            HTTP_STATUS=$(docker compose exec -T app sh -c "curl -s -o /dev/null -w '%{http_code}' http://localhost:8081/actuator/health || true" || true)
             
             if [ "$HTTP_STATUS" == "200" ] || [ "$HTTP_STATUS" == "401" ]; then
               echo "✓ Application is healthy! (Status: $HTTP_STATUS)"
