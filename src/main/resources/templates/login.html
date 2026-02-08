@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>소셜 로그인</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --line: #1f2937;
+      --btn: #f3f4f6;
+      --btn-text: #111827;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Pretendard", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+      background: radial-gradient(1200px 800px at 10% 10%, #1e293b, #0b1020 60%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 22px;
+      letter-spacing: -0.3px;
+    }
+    p {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--btn);
+      color: var(--btn-text);
+      text-decoration: none;
+      font-weight: 600;
+      margin: 10px 0;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    .footer {
+      margin-top: 18px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>소셜 로그인</h1>
+    <p>원하는 계정으로 안전하게 로그인하세요.</p>
+
+    <div th:if="${#lists.isEmpty(providers)}">
+      <p>현재 활성화된 소셜 로그인 제공자가 없습니다.</p>
+    </div>
+
+    <div th:each="p : ${providers}">
+      <a class="btn" th:href="${p.authorizationUrl}" th:text="${p.name} + '로 로그인'"></a>
+    </div>
+
+    <div class="footer">mini_spring</div>
+  </div>
+</body>
+</html>
