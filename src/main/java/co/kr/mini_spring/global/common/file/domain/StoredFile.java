@@ -63,6 +63,13 @@ public class StoredFile {
     }
 
     public String getFullUrl() {
-        return filePath + storedName;
+        if (filePath == null || filePath.isBlank()) {
+            return storedName;
+        }
+        if (storedName == null || storedName.isBlank()) {
+            return filePath;
+        }
+        String normalizedName = storedName.startsWith("/") ? storedName.substring(1) : storedName;
+        return filePath.endsWith("/") ? filePath + normalizedName : filePath + "/" + normalizedName;
     }
 }

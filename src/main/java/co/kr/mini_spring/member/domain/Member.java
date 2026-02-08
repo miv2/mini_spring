@@ -12,11 +12,11 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "member",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_oauth_provider_id", columnNames = {"oauth_provider", "oauth_id"})
+        },
         indexes = {
-                @Index(name = "idx_email", columnList = "email", unique = true),
-                @Index(name = "idx_status_created", columnList = "status, created_at"),
-                @Index(name = "idx_nickname", columnList = "nickname"),
-                @Index(name = "idx_oauth_lookup", columnList = "oauth_provider, oauth_id")
+                @Index(name = "idx_status_created", columnList = "status, created_at")
         })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -50,7 +50,7 @@ public class Member {
     @Column(name = "oauth_provider", nullable = false, length = 20)
     private MemberProvider oauthProvider;
 
-    @Column(name = "oauth_id", length = 255, unique = true)
+    @Column(name = "oauth_id", length = 255)
     private String oauthId;
 
     @Enumerated(EnumType.STRING)
