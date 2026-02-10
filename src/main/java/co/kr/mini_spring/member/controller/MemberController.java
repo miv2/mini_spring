@@ -19,7 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/members")
+@RequestMapping("/api/members")
 @Tag(name = "회원", description = "회원 정보 관리 API")
 public class MemberController {
 

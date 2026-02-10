@@ -27,7 +27,7 @@ import java.util.stream.StreamSupport;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/auth/social")
+@RequestMapping("/api/auth/social")
 @Tag(name = "소셜 로그인", description = "OAuth2 로그인 링크 조회")
 public class SocialLoginController {
 

@@ -21,7 +21,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/posts")
+@RequestMapping("/api/posts")
 @RequiredArgsConstructor
 @Tag(name = "게시글", description = "게시글 조회/작성/수정/삭제/좋아요")
 public class PostController {

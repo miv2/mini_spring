@@ -17,10 +17,10 @@ Spring Boot API 서버입니다. (JWT 인증 + OAuth2 소셜 로그인 지원)
 - `global`: 공통 설정(config), 보안(security), 예외/응답(common), 유틸(util)
 
 ## 인증/인가 흐름
-- 회원가입: `POST /api/v1/auth/signup` → Access/Refresh 발급 + `refresh_token` 저장
-- 로그인: `POST /api/v1/auth/login` → Access/Refresh 발급 + RefreshToken 갱신
-- 토큰 재발급: `POST /api/v1/auth/refresh`
-- 로그아웃(인증 필요): `POST /api/v1/auth/logout` → RefreshToken 폐기(revoke)
+- 회원가입: `POST /api/auth/signup` → Access/Refresh 발급 + `refresh_token` 저장
+- 로그인: `POST /api/auth/login` → Access/Refresh 발급 + RefreshToken 갱신
+- 토큰 재발급: `POST /api/auth/refresh`
+- 로그아웃(인증 필요): `POST /api/auth/logout` → RefreshToken 폐기(revoke)
 
 보안 예외 경로는 `src/main/java/co/kr/mini_spring/global/config/SecurityConfig.java`에서 관리합니다.
 

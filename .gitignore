@@ -27,6 +27,7 @@ bin/
 # Local Environment
 .env
 .env.local
+uploads/
 
 # Querydsl
 /src/main/generated/

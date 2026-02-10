@@ -19,7 +19,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/files")
+@RequestMapping("/api/files")
 @Tag(name = "파일", description = "파일 업로드 API")
 public class FileController {
 

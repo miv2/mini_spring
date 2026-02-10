@@ -70,15 +70,15 @@ public class SecurityConfig {
                                                                 "/swagger-ui/**",
                                                                 "/login",
                                                                 "/login/**",
-                                                                "/api/v1/auth/signup",
-                                                                "/api/v1/auth/login",
-                                                                "/api/v1/auth/refresh",
+                                                                "/api/auth/signup",
+                                                                "/api/auth/login",
+                                                                "/api/auth/refresh",
                                                                 "/oauth2/**",
                                                                 "/login/oauth2/code/**",
                                                                 "/oauth/callback",
-                                                                "/api/v1/files/**")
+                                                                "/api/files/**")
                                                 .permitAll()
-                                                .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                                                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                                 .anyRequest().authenticated())
                                 .oauth2Login(oauth2 -> oauth2
                                                 .authorizationEndpoint(authEndpoint -> authEndpoint

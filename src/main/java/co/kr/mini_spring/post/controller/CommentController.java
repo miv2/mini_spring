@@ -16,7 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/comments")
+@RequestMapping("/api/comments")
 @RequiredArgsConstructor
 @Tag(name = "댓글", description = "댓글/대댓글 작성·수정·삭제")
 public class CommentController {
