@@ -69,6 +69,11 @@ logging:
 jwt:
   secret: ${JWT_SECRET}
 
+management:
+  health:
+    redis:
+      enabled: false
+
 file:
   upload-dir: /app/uploads/ # 리눅스 절대 경로
   public-base-url: /uploads/
