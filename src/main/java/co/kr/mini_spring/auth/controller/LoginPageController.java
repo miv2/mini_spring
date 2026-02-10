@@ -26,6 +26,11 @@ public class LoginPageController {
         return "login";
     }
 
+    @GetMapping("/login/error")
+    public String loginError() {
+        return "login-error";
+    }
+
     @SuppressWarnings("unchecked")
     private List<LoginProvider> getProviders() {
         if (!(clientRegistrationRepository instanceof Iterable)) {

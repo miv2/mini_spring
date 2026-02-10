@@ -21,8 +21,11 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.http.ResponseCookie;
 
 import java.io.IOException;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Slf4j
@@ -88,8 +91,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                                         .revoked(false)
                                         .build()));
 
-        String accessToken = accessTokenInfo.getToken();
-        String refreshToken = refreshTokenInfo.getToken();
+        addTokenCookies(request, response, accessTokenInfo, refreshTokenInfo);
 
         String baseUri = org.springframework.web.servlet.support.ServletUriComponentsBuilder
                 .fromRequestUri(request)
@@ -99,8 +101,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .toUriString();
 
         return UriComponentsBuilder.fromUriString(baseUri)
-                .path("/oauth/callback")
-                .fragment("accessToken=" + accessToken + "&refreshToken=" + refreshToken)
+                .path("/")
                 .build().toUriString();
     }
 
@@ -146,5 +147,45 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     protected void clearAuthenticationAttributes(HttpServletRequest request, HttpServletResponse response) {
         super.clearAuthenticationAttributes(request);
         httpCookieOAuth2AuthorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
+    }
+
+    private void addTokenCookies(HttpServletRequest request, HttpServletResponse response,
+                                 JwtTokenProvider.TokenWithExpiry accessTokenInfo,
+                                 JwtTokenProvider.TokenWithExpiry refreshTokenInfo) {
+        boolean secure = isSecureRequest(request);
+        long accessMaxAge = toMaxAgeSeconds(accessTokenInfo.getExpiresAt());
+        long refreshMaxAge = toMaxAgeSeconds(refreshTokenInfo.getExpiresAt());
+
+        ResponseCookie accessCookie = ResponseCookie.from("accessToken", accessTokenInfo.getToken())
+                .httpOnly(true)
+                .secure(secure)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(accessMaxAge)
+                .build();
+
+        ResponseCookie refreshCookie = ResponseCookie.from("refreshToken", refreshTokenInfo.getToken())
+                .httpOnly(true)
+                .secure(secure)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(refreshMaxAge)
+                .build();
+
+        response.addHeader("Set-Cookie", accessCookie.toString());
+        response.addHeader("Set-Cookie", refreshCookie.toString());
+    }
+
+    private boolean isSecureRequest(HttpServletRequest request) {
+        if (request.isSecure()) {
+            return true;
+        }
+        String proto = request.getHeader("X-Forwarded-Proto");
+        return proto != null && proto.equalsIgnoreCase("https");
+    }
+
+    private long toMaxAgeSeconds(LocalDateTime expiresAt) {
+        long seconds = Duration.between(LocalDateTime.now(), expiresAt).getSeconds();
+        return Math.max(seconds, 0);
     }
 }

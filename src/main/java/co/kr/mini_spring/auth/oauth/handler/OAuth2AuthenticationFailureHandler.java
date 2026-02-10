@@ -24,7 +24,7 @@ public class OAuth2AuthenticationFailureHandler extends SimpleUrlAuthenticationF
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception) throws IOException, ServletException {
         log.error("OAuth2 Authentication Failed: {}", exception.getMessage(), exception);
 
-        String targetUrl = UriComponentsBuilder.fromUriString("http://localhost:5173/login/error")
+        String targetUrl = UriComponentsBuilder.fromUriString("/login/error")
                 .queryParam("message", "소셜 로그인에 실패하였습니다.")
                 .build().toUriString();
 
