@@ -87,6 +87,13 @@ tasks.withType(JavaCompile).configureEach {
     options.getGeneratedSourceOutputDirectory().set(querydslDir)
 }
 
+
 clean {
     delete querydslDir
 }
+
+// plain jar 생성을 비활성화하여 빌드 시 단일 jar만 생성되도록 함
+jar {
+    enabled = false
+}
+
