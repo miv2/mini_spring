@@ -42,15 +42,14 @@ public class JwtTokenProvider {
     public JwtTokenProvider(
             @Value("${jwt.secret}") String secret,
             @Value("${jwt.access-token-expiration}") long accessTokenExpiration,
-            @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration
-    ) {
+            @Value("${jwt.refresh-token-expiration}") long refreshTokenExpiration) {
         // secret을 그대로 byte로 사용하거나 Base64 인코딩 문자열인 경우 디코딩 처리
         Key key;
         try {
             byte[] keyBytes = Decoders.BASE64.decode(secret);
             key = Keys.hmacShaKeyFor(keyBytes);
-        } catch (IllegalArgumentException e) {
-            // Base64가 아니라면 바로 bytes 사용
+        } catch (Exception e) {
+            // Base64가 아니라면(또는 디코딩 오류 시) 바로 bytes 사용
             key = Keys.hmacShaKeyFor(secret.getBytes());
         }
         this.secretKey = key;
