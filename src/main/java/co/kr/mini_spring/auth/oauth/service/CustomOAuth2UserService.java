@@ -1,13 +1,17 @@
 package co.kr.mini_spring.auth.oauth.service;
 
+import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.security.MemberAdapter;
 
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.MemberStatus;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
+import co.kr.mini_spring.global.common.file.domain.StoredFile;
+import co.kr.mini_spring.global.common.file.domain.repository.ImageFileRepository;
 import co.kr.mini_spring.auth.oauth.OAuthAttributes;
 import co.kr.mini_spring.global.util.NicknameGenerator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Optional;
 
@@ -35,6 +40,10 @@ import java.util.Optional;
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
     private final SocialMemberRepository socialMemberRepository;
+    private final ImageFileRepository imageFileRepository;
+
+    @Value("${file.default-profile-image:/uploads/default-profile.png}")
+    private String defaultProfileImagePath;
 
     /**
      * Spring Security가 소셜 로그인 성공 시 호출하는 메인 메서드입니다.
@@ -53,7 +62,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         OAuthAttributes attributes;
         try {
             attributes = OAuthAttributes.of(registrationId, userNameAttributeName, oAuth2User.getAttributes());
-        } catch (co.kr.mini_spring.global.common.exception.BusinessException e) {
+        } catch (BusinessException e) {
             throw new OAuth2AuthenticationException(new OAuth2Error("unsupported_provider"), e.getMessage());
         }
 
@@ -115,8 +124,20 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             member.updateProfile(attributes.getName(), member.getNickname());
         }
 
+        if (member.getProfileImage() == null) {
+            applyDefaultProfileImage(member);
+        }
+
+        member.updateLastLogin();
+
         // 이메일로 찾았으나 소셜 정보가 비어 있다면 연결 없이 그대로 사용
         return socialMemberRepository.save(member);
+    }
+
+    private void applyDefaultProfileImage(SocialMember member) {
+        String fileName = Paths.get(defaultProfileImagePath).getFileName().toString();
+        Optional<StoredFile> defaultFile = imageFileRepository.findByStoredName(fileName);
+        defaultFile.ifPresent(member::updateProfileImage);
     }
 
 }

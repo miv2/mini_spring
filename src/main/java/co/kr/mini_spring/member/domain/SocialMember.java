@@ -75,7 +75,6 @@ public class SocialMember {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    // 비즈니스 로직
     public void updateLastLogin() {
         this.lastLoginAt = LocalDateTime.now();
     }
