@@ -7,7 +7,7 @@ Spring Boot API 서버입니다. (JWT 인증 + OAuth2 소셜 로그인 지원)
 - Spring Security + JWT(Access/Refresh)
 - OAuth2 Client (Google, Kakao)
 - Spring Data JPA + Querydsl
-- MariaDB (`src/main/resources/schema.sql`)
+- PostgreSQL (`scripts/db/db.sql`)
 
 ## 패키지 구조
 `src/main/java/co/kr/mini_spring`
@@ -43,4 +43,11 @@ Spring Boot API 서버입니다. (JWT 인증 + OAuth2 소셜 로그인 지원)
 
 ## 설정 주의사항
 - `src/main/resources/application.yml`에는 민감정보(DB/OAuth/JWT)가 포함될 수 있으니 운영에서는 반드시 환경 변수로 분리하고 값을 교체하세요.
-- `spring.jpa.hibernate.ddl-auto: none` 설정이므로 DB는 `schema.sql`과 정합성을 유지해야 합니다.
+- `spring.jpa.hibernate.ddl-auto: none` 설정이므로 DB는 `scripts/db/db.sql`과 정합성을 유지해야 합니다.
+
+## DB 운영 규칙
+- `scripts/db/db.sql`만 스키마 정본으로 유지합니다.
+- 테이블/인덱스 변경이 있을 때만 `db.sql`을 갱신합니다.
+- 운영 DB 반영은 수동으로 적용합니다.
+- 데이터는 별도 관리하며 스키마만 유지합니다.
+- 대규모 변경/롤백 필요 시에만 날짜 prefix 스크립트를 추가합니다. (예: `scripts/db/20260210_*.sql`)

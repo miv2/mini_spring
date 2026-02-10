@@ -32,7 +32,7 @@ public class Post {
     private String title;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "TINYTEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "view_count")

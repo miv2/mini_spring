@@ -28,7 +28,7 @@ public class Comment {
     private Long id;
 
     @Lob
-    @Column(nullable = false, columnDefinition = "TINYTEXT")
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
     @Column(name = "author_id")
