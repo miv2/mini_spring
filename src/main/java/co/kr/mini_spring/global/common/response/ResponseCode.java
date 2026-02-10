@@ -10,6 +10,8 @@ public enum ResponseCode {
     // 2xx Success
     SUCCESS("S001", "요청이 성공적으로 처리되었습니다.", HttpStatus.OK),
     CREATED("S002", "리소스가 성공적으로 생성되었습니다.", HttpStatus.CREATED),
+    SUCCESS_SIGNUP("S003", "회원가입이 완료되었습니다.", HttpStatus.CREATED),
+    SUCCESS_LOGIN("S004", "로그인이 완료되었습니다.", HttpStatus.OK),
 
     // Common Client Error (4xx)
     INVALID_INPUT_VALUE("C001", "잘못된 입력 값입니다.", HttpStatus.BAD_REQUEST),
@@ -35,6 +37,9 @@ public enum ResponseCode {
     DUPLICATE_MEMBER_NAME("M002", "중복된 회원 이름입니다.", HttpStatus.CONFLICT),
     DUPLICATE_MEMBER_EMAIL("M003", "중복된 회원 이메일입니다.", HttpStatus.CONFLICT),
     INVALID_PASSWORD("M004", "잘못된 비밀번호입니다.", HttpStatus.BAD_REQUEST),
+    DUPLICATE_EMAIL("M005", "이미 존재하는 이메일입니다.", HttpStatus.CONFLICT),
+    DUPLICATE_NICKNAME("M006", "이미 존재하는 닉네임입니다.", HttpStatus.CONFLICT),
+    MEMBER_NOT_FOUND_NEW("M007", "존재하지 않는 회원입니다.", HttpStatus.NOT_FOUND), // Renamed to avoid conflict with M001
 
     // Auth
     INVALID_TOKEN("A001", "유효하지 않은 토큰입니다.", HttpStatus.UNAUTHORIZED),
@@ -43,6 +48,9 @@ public enum ResponseCode {
     TOKEN_NOT_FOUND("A004", "토큰을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED),
     REFRESH_TOKEN_NOT_FOUND("A005", "리프레시 토큰을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED),
     REFRESH_TOKEN_EXPIRED("A006", "리프레시 토큰이 만료되었습니다.", HttpStatus.UNAUTHORIZED),
+    AUTH_INVALID_PASSWORD("A007", "비밀번호가 일치하지 않습니다.", HttpStatus.UNAUTHORIZED), // Renamed to avoid conflict with M004
+    SOCIAL_LOGIN_USER("A008", "소셜 로그인 가입자입니다. 소셜 로그인을 이용해주세요.", HttpStatus.BAD_REQUEST),
+    USER_NOT_ACTIVE("A009", "활성화된 계정이 아닙니다.", HttpStatus.FORBIDDEN),
 
     // File
     FILE_NOT_FOUND("F001", "파일을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),

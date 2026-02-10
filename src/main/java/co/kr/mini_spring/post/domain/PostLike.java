@@ -1,6 +1,5 @@
 package co.kr.mini_spring.post.domain;
 
-import co.kr.mini_spring.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -22,11 +21,6 @@ public class PostLike {
     private PostLikeId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("memberId") // 복합 키 클래스의 memberId 필드에 매핑
-    @JoinColumn(name = "member_id")
-    private Member member;
-
-    @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("postId") // 복합 키 클래스의 postId 필드에 매핑
     @JoinColumn(name = "post_id")
     private Post post;
@@ -42,8 +36,8 @@ public class PostLike {
     @AllArgsConstructor
     @EqualsAndHashCode
     public static class PostLikeId implements Serializable {
-        @Column(name = "member_id")
-        private Long memberId;
+        @Column(name = "author_id")
+        private Long authorId; // memberId → authorId로 통일
 
         @Column(name = "post_id")
         private Long postId;

@@ -48,6 +48,7 @@ spring:
             client-secret: ${GOOGLE_CLIENT_SECRET}
             scope:
               - email
+              - profile
             redirect-uri: "${APP_BASE_URL}/login/oauth2/code/google"
           kakao:
             client-id: ${KAKAO_CLIENT_ID}

@@ -21,10 +21,10 @@ public class PostListResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private final LocalDateTime createdAt;
 
-    public PostListResponse(Post post) {
+    public PostListResponse(Post post, co.kr.mini_spring.member.domain.SocialMember author) {
         this.id = post.getId();
         this.title = post.getTitle();
-        this.memberName = post.getMember() != null ? post.getMember().getNickname() : null;
+        this.memberName = author != null ? author.getNickname() : null;
         this.likeCount = post.getLikeCount();
         this.viewCount = post.getViewCount();
         this.createdAt = post.getCreatedAt();

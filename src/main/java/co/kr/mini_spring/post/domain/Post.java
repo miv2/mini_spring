@@ -1,6 +1,5 @@
 package co.kr.mini_spring.post.domain;
 
-import co.kr.mini_spring.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,7 +12,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "post", indexes = {
-        @Index(name = "idx_member_id", columnList = "member_id"),
+        @Index(name = "idx_author_id", columnList = "author_id"),
         @Index(name = "idx_created_at", columnList = "created_at"),
         @Index(name = "idx_published", columnList = "is_published"),
         @Index(name = "idx_deleted_at", columnList = "deleted_at")
@@ -33,7 +32,7 @@ public class Post {
     private String title;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TINYTEXT")
     private String content;
 
     @Column(name = "view_count")
@@ -52,9 +51,8 @@ public class Post {
     @Builder.Default
     private boolean published = true;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
+    @Column(name = "author_id")
+    private Long authorId;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

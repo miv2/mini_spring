@@ -1,6 +1,5 @@
 package co.kr.mini_spring.post.domain;
 
-import co.kr.mini_spring.member.domain.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -13,7 +12,7 @@ import java.util.List;
 @Entity
 @Table(name = "comment", indexes = {
         @Index(name = "idx_post_created", columnList = "post_id, created_at DESC"),
-        @Index(name = "idx_member_created", columnList = "member_id, created_at DESC"),
+        @Index(name = "idx_member_created", columnList = "created_at DESC"),
         @Index(name = "idx_parent_depth", columnList = "parent_comment_id, depth"),
         @Index(name = "idx_deleted_at", columnList = "deleted_at")
 })
@@ -29,12 +28,11 @@ public class Comment {
     private Long id;
 
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TINYTEXT")
     private String content;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
+    @Column(name = "author_id")
+    private Long authorId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "post_id", nullable = false)
@@ -63,7 +61,7 @@ public class Comment {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    //== 비즈니스 로직 ==//
+    // == 비즈니스 로직 ==//
     public void updateContent(String content) {
         this.content = content;
     }

@@ -22,7 +22,7 @@ public class RefreshToken {
     private String token;
 
     @Column(nullable = false)
-    private Long memberId;
+    private Long authorId;
 
     @Column(nullable = false)
     private LocalDateTime expiresAt;
@@ -34,9 +34,9 @@ public class RefreshToken {
     private boolean revoked = false;
 
     @Builder
-    public RefreshToken(String token, Long memberId, LocalDateTime expiresAt, boolean revoked) {
+    public RefreshToken(String token, Long authorId, LocalDateTime expiresAt, boolean revoked) {
         this.token = token;
-        this.memberId = memberId;
+        this.authorId = authorId;
         this.expiresAt = expiresAt;
         this.revoked = revoked;
         this.createdAt = LocalDateTime.now();

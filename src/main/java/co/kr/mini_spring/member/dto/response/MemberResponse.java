@@ -1,6 +1,6 @@
 package co.kr.mini_spring.member.dto.response;
 
-import co.kr.mini_spring.member.domain.Member;
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.MemberRole;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -27,7 +27,7 @@ public class MemberResponse {
     @Schema(description = "권한")
     private final MemberRole role;
 
-    public MemberResponse(Member member, String defaultProfileImage) {
+    public MemberResponse(SocialMember member, String defaultProfileImage) {
         this.id = member.getId();
         this.email = member.getEmail();
         this.name = member.getName();

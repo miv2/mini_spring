@@ -1,6 +1,5 @@
 package co.kr.mini_spring.post.domain.repository;
 
-import co.kr.mini_spring.member.domain.QMember;
 import co.kr.mini_spring.post.domain.Comment;
 import co.kr.mini_spring.post.domain.QComment;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -23,7 +22,6 @@ public class CommentQueryRepository {
 
     private final JPAQueryFactory queryFactory;
     private static final QComment comment = QComment.comment;
-    private static final QMember member = QMember.member;
 
     /**
      * 특정 게시글의 최상위 댓글 목록을 커서 기반 페이징으로 조회합니다.
@@ -31,12 +29,10 @@ public class CommentQueryRepository {
     public List<Comment> findAllTopLevelCommentsByPostIdCursor(Long postId, Long lastId, int size) {
         return queryFactory
                 .selectFrom(comment)
-                .leftJoin(comment.member, member).fetchJoin()
                 .where(
                         comment.post.id.eq(postId),
                         comment.parent.isNull(),
-                        ltCommentId(lastId)
-                )
+                        ltCommentId(lastId))
                 .orderBy(comment.id.desc())
                 .limit(size + 1)
                 .fetch();
@@ -53,9 +49,7 @@ public class CommentQueryRepository {
     public Optional<Comment> findByIdWithMember(Long id) {
         return Optional.ofNullable(
                 queryFactory.selectFrom(comment)
-                        .leftJoin(comment.member, member).fetchJoin()
                         .where(comment.id.eq(id))
-                        .fetchOne()
-        );
+                        .fetchOne());
     }
 }

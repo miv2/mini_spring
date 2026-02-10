@@ -1,6 +1,5 @@
 package co.kr.mini_spring.post.domain.repository;
 
-import co.kr.mini_spring.member.domain.QMember;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.QHashtag;
 import co.kr.mini_spring.post.domain.QPost;
@@ -34,7 +33,6 @@ public class PostQueryRepository {
     private static final QPost post = QPost.post;
     private static final QPostHashtag postHashtag = QPostHashtag.postHashtag;
     private static final QHashtag hashtag = QHashtag.hashtag;
-    private static final QMember member = QMember.member;
 
     /**
      * 게시글을 비관적 락(PESSIMISTIC_WRITE)을 걸어 조회합니다.
@@ -45,8 +43,7 @@ public class PostQueryRepository {
                 queryFactory.selectFrom(post)
                         .setLockMode(LockModeType.PESSIMISTIC_WRITE)
                         .where(post.id.eq(id))
-                        .fetchOne()
-        );
+                        .fetchOne());
     }
 
     /**
@@ -56,13 +53,11 @@ public class PostQueryRepository {
     public Optional<Post> findByIdWithAllRelations(Long id) {
         return Optional.ofNullable(
                 queryFactory.selectFrom(post)
-                        .leftJoin(post.member, member).fetchJoin()
                         .leftJoin(post.postHashtags, postHashtag).fetchJoin()
                         .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                         .where(post.id.eq(id))
                         .distinct()
-                        .fetchOne()
-        );
+                        .fetchOne());
     }
 
     /**
@@ -70,9 +65,10 @@ public class PostQueryRepository {
      * - lastId를 기준으로 이전 데이터는 무시하고 다음 데이터부터 조회하여 성능을 최적화합니다.
      * - size + 1을 조회하여 다음 페이지 존재 여부를 판단합니다.
      */
-    public List<Post> findAllByPublishedCursor(boolean published, Long lastId, int size, String keyword, List<String> hashtagsFilter, Long authorId) {
+    public List<Post> findAllByPublishedCursor(boolean published, Long lastId, int size, String keyword,
+            List<String> hashtagsFilter, Long authorId) {
         BooleanExpression conditions = post.published.eq(published)
-                .and(post.member.isNotNull())
+                .and(post.authorId.isNotNull())
                 .and(ltPostId(lastId)) // 커서 조건 추가
                 .and(applyAuthor(authorId))
                 .and(applyKeyword(keyword))
@@ -92,7 +88,6 @@ public class PostQueryRepository {
 
         // 2. 조회된 ID들에 해당하는 실데이터 Fetch Join 조회
         return queryFactory.selectFrom(post)
-                .leftJoin(post.member, member).fetchJoin()
                 .leftJoin(post.postHashtags, postHashtag).fetchJoin()
                 .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                 .where(post.id.in(ids))
@@ -112,10 +107,8 @@ public class PostQueryRepository {
     public Optional<Post> findByIdWithMember(Long id) {
         return Optional.ofNullable(
                 queryFactory.selectFrom(post)
-                        .leftJoin(post.member, member).fetchJoin()
                         .where(post.id.eq(id))
-                        .fetchOne()
-        );
+                        .fetchOne());
     }
 
     /**
@@ -156,8 +149,7 @@ public class PostQueryRepository {
                 .set(post.commentCount,
                         new CaseBuilder()
                                 .when(post.commentCount.gt(0)).then(post.commentCount.subtract(1))
-                                .otherwise(0)
-                )
+                                .otherwise(0))
                 .where(post.id.eq(id))
                 .execute();
     }
@@ -176,8 +168,7 @@ public class PostQueryRepository {
                         case "viewCount" -> new OrderSpecifier<>(direction, post.viewCount);
                         case "title" -> new OrderSpecifier<>(direction, post.title);
                         default -> new OrderSpecifier<>(direction, post.id);
-                    }
-            );
+                    });
         });
         if (orderSpecifiers.isEmpty()) {
             orderSpecifiers.add(post.createdAt.desc());
@@ -189,14 +180,15 @@ public class PostQueryRepository {
      * 작성자 필터링 조건을 생성합니다.
      */
     private BooleanExpression applyAuthor(Long authorId) {
-        return authorId == null ? null : post.member.id.eq(authorId);
+        return authorId == null ? null : post.authorId.eq(authorId);
     }
 
     /**
      * 제목 및 내용 키워드 검색 조건을 생성합니다.
      */
     private BooleanExpression applyKeyword(String keyword) {
-        if (keyword == null || keyword.isBlank()) return null;
+        if (keyword == null || keyword.isBlank())
+            return null;
         String kw = keyword.trim();
         return post.title.containsIgnoreCase(kw).or(post.content.containsIgnoreCase(kw));
     }
@@ -205,7 +197,8 @@ public class PostQueryRepository {
      * 해시태그 필터링 조건을 생성합니다.
      */
     private BooleanExpression applyHashtagFilter(List<String> hashtagsFilter) {
-        if (hashtagsFilter == null || hashtagsFilter.isEmpty()) return null;
+        if (hashtagsFilter == null || hashtagsFilter.isEmpty())
+            return null;
         Set<String> names = Set.copyOf(hashtagsFilter);
         return post.id.in(
                 queryFactory.select(postHashtag.post.id)
@@ -213,7 +206,6 @@ public class PostQueryRepository {
                         .leftJoin(postHashtag.hashtag, hashtag)
                         .groupBy(postHashtag.post.id)
                         .having(hashtag.name.in(names))
-                        .fetch()
-        );
+                        .fetch());
     }
 }

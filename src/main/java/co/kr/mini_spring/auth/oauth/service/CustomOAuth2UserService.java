@@ -1,8 +1,10 @@
 package co.kr.mini_spring.auth.oauth.service;
 
-import co.kr.mini_spring.member.domain.Member;
+import co.kr.mini_spring.global.security.MemberAdapter;
+
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.MemberStatus;
-import co.kr.mini_spring.member.domain.repository.MemberRepository;
+import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.auth.oauth.OAuthAttributes;
 import co.kr.mini_spring.global.util.NicknameGenerator;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +23,6 @@ import org.springframework.util.StringUtils;
 
 import java.util.Collections;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * 소셜 로그인 성공 후 후속 조치를 담당하는 서비스입니다.
@@ -33,8 +34,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequest, OAuth2User> {
 
-    private final MemberRepository memberRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final SocialMemberRepository socialMemberRepository;
 
     /**
      * Spring Security가 소셜 로그인 성공 시 호출하는 메인 메서드입니다.
@@ -62,19 +62,17 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         }
 
         // 4. DB에 사용자가 이미 있는지 확인하고, 없으면 새로 저장(회원가입), 있으면 정보를 업데이트합니다.
-        Member member = findOrCreateMember(attributes);
+        SocialMember member = findOrCreateMember(attributes);
 
         // 5. Spring Security가 이 사용자를 인증된 사용자로 처리할 수 있도록 최종 인증 객체를 생성하여 반환합니다.
-        return new DefaultOAuth2User(
-                Collections.singleton(new SimpleGrantedAuthority(member.getRole().getKey())),
-                attributes.getAttributes(),
-                attributes.getNameAttributeKey()
-        );
+        // MemberAdapter를 사용하여 UserDetails와 OAuth2User를 호환되게 처리합니다.
+        return new MemberAdapter(member, attributes.getAttributes());
     }
 
     /**
      * 기본 OAuth2UserService를 사용하여 소셜 서비스로부터 사용자 정보를 로드합니다.
      * 이 메서드는 테스트 용이성을 위해 분리되었습니다.
+     * 
      * @param userRequest 소셜 서비스에서 제공하는 사용자 요청 정보
      * @return 로드된 OAuth2User 객체
      */
@@ -85,23 +83,25 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     /**
      * 이메일을 기준으로 사용자를 찾거나, 없는 경우 새로 생성하여 저장합니다.
+     * 
      * @param attributes 표준화된 소셜 로그인 사용자 정보
      * @return 저장되거나 업데이트된 Member 엔티티
      */
-    private Member findOrCreateMember(OAuthAttributes attributes) {
+    private SocialMember findOrCreateMember(OAuthAttributes attributes) {
         // 1. 이메일로 기존 사용자가 있는지 찾아봅니다.
-        Optional<Member> memberOptional = Optional.empty();
+        Optional<SocialMember> memberOptional = Optional.empty();
         if (attributes.getOauthId() != null && attributes.getProvider() != null) {
-            memberOptional = memberRepository.findByOauthProviderAndOauthId(attributes.getProvider(), attributes.getOauthId());
+            memberOptional = socialMemberRepository.findByProviderAndOauthId(attributes.getProvider(),
+                    attributes.getOauthId());
         }
         if (memberOptional.isEmpty() && StringUtils.hasText(attributes.getEmail())) {
-            memberOptional = memberRepository.findByEmail(attributes.getEmail());
+            memberOptional = socialMemberRepository.findByEmail(attributes.getEmail());
         }
 
-        Member member = memberOptional.orElseGet(() -> {
-            String encodedPassword = passwordEncoder.encode(UUID.randomUUID().toString());
-            String nickname = NicknameGenerator.generateUniqueNickname(n -> memberRepository.findByNickname(n).isPresent());
-            return attributes.toEntity(encodedPassword, nickname);
+        SocialMember member = memberOptional.orElseGet(() -> {
+            String nickname = NicknameGenerator
+                    .generateUniqueNickname(n -> socialMemberRepository.findByNickname(n).isPresent());
+            return attributes.toEntity(nickname);
         });
 
         if (member.getStatus() == MemberStatus.WITHDRAWN) {
@@ -112,15 +112,11 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         }
 
         if (StringUtils.hasText(attributes.getName())) {
-            member.update(attributes.getName(), member.getNickname());
+            member.updateProfile(attributes.getName(), member.getNickname());
         }
 
-        // 이메일로 찾았으나 소셜 정보가 비어 있다면 연결해 둔다.
-        if (member.getOauthId() == null && attributes.getOauthId() != null && attributes.getProvider() != null) {
-            member.changeProvider(attributes.getProvider(), attributes.getOauthId());
-        }
-
-        return memberRepository.save(member);
+        // 이메일로 찾았으나 소셜 정보가 비어 있다면 연결 없이 그대로 사용
+        return socialMemberRepository.save(member);
     }
 
 }

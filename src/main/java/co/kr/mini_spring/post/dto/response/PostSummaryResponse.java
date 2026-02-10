@@ -1,5 +1,6 @@
 package co.kr.mini_spring.post.dto.response;
 
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.post.domain.Post;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -11,9 +12,7 @@ import java.util.stream.Collectors;
 
 @Getter
 @JsonPropertyOrder({
-        "id", "title", "memberId"
-        , "memberName", "likeCount", "viewCount"
-        , "commentCount", "hashtags", "createdAt"
+        "id", "title", "memberId", "memberName", "likeCount", "viewCount", "commentCount", "hashtags", "createdAt"
 })
 public class PostSummaryResponse {
     private final Long id;
@@ -28,11 +27,11 @@ public class PostSummaryResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private final LocalDateTime createdAt;
 
-    public PostSummaryResponse(Post post) {
+    public PostSummaryResponse(Post post, SocialMember author) {
         this.id = post.getId();
         this.title = post.getTitle();
-        this.memberId = post.getMember() != null ? post.getMember().getId() : null;
-        this.memberName = post.getMember() != null ? post.getMember().getNickname() : null;
+        this.memberId = post.getAuthorId();
+        this.memberName = author != null ? author.getNickname() : null;
         this.likeCount = post.getLikeCount();
         this.viewCount = post.getViewCount();
         this.commentCount = post.getCommentCount();

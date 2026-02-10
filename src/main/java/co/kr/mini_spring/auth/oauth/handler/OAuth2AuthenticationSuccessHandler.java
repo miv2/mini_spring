@@ -4,11 +4,10 @@ import co.kr.mini_spring.auth.token.domain.RefreshToken;
 import co.kr.mini_spring.auth.token.repository.RefreshTokenRepository;
 import co.kr.mini_spring.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
 import co.kr.mini_spring.global.security.JwtTokenProvider;
-import co.kr.mini_spring.member.domain.Member;
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
-import co.kr.mini_spring.member.domain.repository.MemberRepository;
-import co.kr.mini_spring.member.domain.MemberProvider;
+import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,13 +31,14 @@ import java.util.Map;
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final MemberRepository memberRepository; // Member 조회를 위해 주입
+    private final SocialMemberRepository socialMemberRepository; // SocialMember 조회를 위해 주입
     private final RefreshTokenRepository refreshTokenRepository;
     private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
     @Override
     @Transactional // Refresh Token 저장 로직을 포함하므로 트랜잭션 처리
-    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
+            Authentication authentication) throws IOException, ServletException {
         String targetUrl = determineTargetUrl(request, response, authentication);
 
         if (response.isCommitted()) {
@@ -50,7 +50,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 
-    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
+    protected String determineTargetUrl(HttpServletRequest request, HttpServletResponse response,
+            Authentication authentication) {
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
         OAuth2AuthenticationToken authToken = (OAuth2AuthenticationToken) authentication;
         String registrationId = authToken.getAuthorizedClientRegistrationId();
@@ -67,31 +68,38 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         JwtTokenProvider.TokenWithExpiry accessTokenInfo = jwtTokenProvider.generateAccessToken(email, role);
         JwtTokenProvider.TokenWithExpiry refreshTokenInfo = jwtTokenProvider.generateRefreshToken(email);
 
-        // 1. 이메일로 Member를 조회하여 member_id를 얻습니다.
-        Member member = memberRepository.findByOauthProviderAndOauthId(
-                        provider,
-                        oauthId)
-                .orElseGet(() -> memberRepository.findByEmail(email)
+        // 1. 이메일로 SocialMember를 조회하여 member_id를 얻습니다.
+        SocialMember member = socialMemberRepository.findByProviderAndOauthId(
+                provider,
+                oauthId)
+                .orElseGet(() -> socialMemberRepository.findByEmail(email)
                         .orElseThrow(() -> new IllegalStateException("OAuth2 인증 후 사용자를 찾을 수 없습니다: " + email)));
 
         // 2. Refresh Token을 DB에 저장하거나 업데이트합니다.
-        refreshTokenRepository.findByMemberId(member.getId())
+        refreshTokenRepository.findByAuthorId(member.getId())
                 .ifPresentOrElse(
-                        existingToken -> existingToken.updateToken(refreshTokenInfo.getToken(), refreshTokenInfo.getExpiresAt()),
+                        existingToken -> existingToken.updateToken(refreshTokenInfo.getToken(),
+                                refreshTokenInfo.getExpiresAt()),
                         () -> refreshTokenRepository.save(
                                 RefreshToken.builder()
                                         .token(refreshTokenInfo.getToken())
-                                        .memberId(member.getId())
+                                        .authorId(member.getId())
                                         .expiresAt(refreshTokenInfo.getExpiresAt())
                                         .revoked(false)
-                                        .build()
-                        )
-                );
+                                        .build()));
 
         String accessToken = accessTokenInfo.getToken();
         String refreshToken = refreshTokenInfo.getToken();
 
-        return UriComponentsBuilder.fromUriString("http://localhost:5173/oauth/callback")
+        String baseUri = org.springframework.web.servlet.support.ServletUriComponentsBuilder
+                .fromRequestUri(request)
+                .replacePath(request.getContextPath())
+                .replaceQuery(null)
+                .build()
+                .toUriString();
+
+        return UriComponentsBuilder.fromUriString(baseUri)
+                .path("/oauth/callback")
                 .fragment("accessToken=" + accessToken + "&refreshToken=" + refreshToken)
                 .build().toUriString();
     }
@@ -113,13 +121,16 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private String resolveOauthId(String registrationId, String defaultName, Map<String, Object> attributes) {
         if ("kakao".equalsIgnoreCase(registrationId)) {
             Object id = attributes.get("id");
-            if (id != null) return id.toString();
+            if (id != null)
+                return id.toString();
         }
         if ("google".equalsIgnoreCase(registrationId)) {
             Object sub = attributes.get("sub");
-            if (sub != null) return sub.toString();
+            if (sub != null)
+                return sub.toString();
             Object id = attributes.get("id");
-            if (id != null) return id.toString();
+            if (id != null)
+                return id.toString();
         }
         return defaultName;
     }

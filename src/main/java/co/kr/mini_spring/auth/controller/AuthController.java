@@ -1,14 +1,10 @@
 package co.kr.mini_spring.auth.controller;
 
 import co.kr.mini_spring.global.security.MemberAdapter;
-import co.kr.mini_spring.auth.dto.request.LoginRequest;
 import co.kr.mini_spring.auth.dto.request.TokenRefreshRequest;
 import co.kr.mini_spring.auth.dto.response.TokenResponse;
-import co.kr.mini_spring.member.dto.request.SignUpRequest;
-import co.kr.mini_spring.member.dto.response.SignUpResponse;
 import co.kr.mini_spring.global.common.response.ApiResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
-import co.kr.mini_spring.member.service.MemberService;
 import co.kr.mini_spring.auth.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -19,33 +15,18 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 인증 관련 API 컨트롤러
+ * 인증 관련 API 컨트롤러 (OAuth2 전용)
+ * - 소셜 로그인은 /oauth2/authorization/{provider}를 통해 처리
+ * - 이 컨트롤러는 토큰 갱신 및 로그아웃만 담당
  */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/auth")
-@Tag(name = "인증", description = "회원가입/로그인/토큰 관리")
+@Tag(name = "인증", description = "토큰 관리 (OAuth2 전용)")
 public class AuthController {
 
-    private final MemberService memberService;
     private final AuthService authService;
-
-    @Operation(summary = "회원가입", description = "이메일/비밀번호로 회원가입하고 Access/Refresh 토큰을 발급합니다.")
-    @PostMapping("/signup")
-    public ApiResponse<SignUpResponse> signUp(@Valid @RequestBody SignUpRequest request) {
-        log.info("[SignUp] 요청 email={}", request.getEmail());
-        SignUpResponse response = memberService.signUp(request);
-        return ApiResponse.success(ResponseCode.CREATED, response);
-    }
-
-    @Operation(summary = "로그인", description = "이메일/비밀번호로 로그인하고 Access/Refresh 토큰을 발급합니다.")
-    @PostMapping("/login")
-    public ApiResponse<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
-        log.info("[Login] 요청 email={}", request.getEmail());
-        TokenResponse response = authService.login(request);
-        return ApiResponse.success(ResponseCode.SUCCESS, response);
-    }
 
     @Operation(summary = "토큰 재발급", description = "RefreshToken을 검증해 새로운 Access/Refresh 토큰을 발급합니다.")
     @PostMapping("/refresh")

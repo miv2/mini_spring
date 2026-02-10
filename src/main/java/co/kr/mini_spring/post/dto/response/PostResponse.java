@@ -1,6 +1,6 @@
 package co.kr.mini_spring.post.dto.response;
 
-import co.kr.mini_spring.member.domain.Member;
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.post.domain.Post;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
@@ -37,17 +37,17 @@ public class PostResponse {
 
     /**
      * 게시글 상세 응답 생성자
-     * @param post 게시글 엔티티
+     * 
+     * @param post        게시글 엔티티
      * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
      */
-    public PostResponse(Post post, Member currentUser, Integer viewCountOverride) {
+    public PostResponse(Post post, SocialMember author, SocialMember currentUser, Integer viewCountOverride) {
         this.id = post.getId();
         this.title = post.getTitle();
         this.content = post.getContent();
         this.viewCount = viewCountOverride != null ? viewCountOverride : post.getViewCount();
         this.likeCount = post.getLikeCount();
-        Member author = post.getMember();
-        this.memberId = author != null ? author.getId() : null;
+        this.memberId = post.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
