@@ -72,7 +72,7 @@ jwt:
 management:
   health:
     redis:
-      enabled: false
+      enabled: true
 
 file:
   upload-dir: /app/uploads/ # 리눅스 절대 경로
