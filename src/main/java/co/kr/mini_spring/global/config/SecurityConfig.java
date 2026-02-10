@@ -75,8 +75,7 @@ public class SecurityConfig {
                                                                 "/api/auth/refresh",
                                                                 "/oauth2/**",
                                                                 "/login/oauth2/code/**",
-                                                                "/oauth/callback",
-                                                                "/api/files/**")
+                                                                "/oauth/callback")
                                                 .permitAll()
                                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                                 .anyRequest().authenticated())
