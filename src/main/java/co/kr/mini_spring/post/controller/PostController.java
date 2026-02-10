@@ -30,9 +30,10 @@ public class PostController {
 
     /**
      * 모든 공개된 게시글 목록을 커서 기반 페이징으로 조회합니다.
-     * @param lastId 마지막으로 조회된 게시글 ID (커서)
-     * @param size 페이지 당 게시글 수
-     * @param keyword 제목/본문 키워드 검색
+     * 
+     * @param lastId   마지막으로 조회된 게시글 ID (커서)
+     * @param size     페이지 당 게시글 수
+     * @param keyword  제목/본문 키워드 검색
      * @param hashtags 해시태그 이름(복수) 필터
      * @param authorId 작성자 ID 필터
      * @return 커서 기반 페이징된 게시글 목록
@@ -44,31 +45,32 @@ public class PostController {
             @Parameter(description = "페이지 크기") @RequestParam(value = "size", defaultValue = "10") int size,
             @Parameter(description = "제목/본문 키워드 검색") @RequestParam(value = "keyword", required = false) String keyword,
             @Parameter(description = "해시태그 이름(복수 전달 가능)") @RequestParam(value = "hashtags", required = false) List<String> hashtags,
-            @Parameter(description = "작성자 ID 필터") @RequestParam(value = "authorId", required = false) Long authorId
-    ) {
-        CursorResponse<PostSummaryResponse> response = postService.getPublishedPosts(lastId, size, keyword, hashtags, authorId);
+            @Parameter(description = "작성자 ID 필터") @RequestParam(value = "authorId", required = false) Long authorId) {
+        CursorResponse<PostSummaryResponse> response = postService.getPublishedPosts(lastId, size, keyword, hashtags,
+                authorId);
         return ApiResponse.success(response);
     }
 
     /**
      * 특정 게시글 상세 조회
-     * @param postId 조회할 게시글 ID
+     * 
+     * @param postId        조회할 게시글 ID
      * @param memberAdapter (Optional) 인증된 사용자 정보
      * @return 게시글 상세 정보
      */
     @GetMapping("/{postId}")
     @Operation(summary = "게시글 상세 조회", description = "게시글 상세 정보와 댓글/해시태그를 반환합니다.")
     public ApiResponse<PostResponse> getPost(
-            @PathVariable Long postId,
-            @AuthenticationPrincipal MemberAdapter memberAdapter
-    ) {
+            @Parameter(description = "조회할 게시글 ID") @PathVariable Long postId,
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         PostResponse response = postService.getPost(postId, memberAdapter != null ? memberAdapter.getMember() : null);
         return ApiResponse.success(response);
     }
 
     /**
      * 게시글 생성
-     * @param request 게시글 생성 요청 DTO
+     * 
+     * @param request       게시글 생성 요청 DTO
      * @param memberAdapter 인증된 사용자 정보
      * @return 생성된 게시글 상세 정보
      */
@@ -76,74 +78,73 @@ public class PostController {
     @Operation(summary = "게시글 생성", description = "인증된 사용자가 새 게시글을 생성합니다.")
     public ApiResponse<PostResponse> createPost(
             @Valid @RequestBody PostCreateRequest request,
-            @AuthenticationPrincipal MemberAdapter memberAdapter
-    ) {
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         PostResponse response = postService.createPost(request, memberAdapter.getMember());
         return ApiResponse.success(response);
     }
 
     /**
      * 게시글 좋아요 추가
-     * @param postId 좋아요를 누를 게시글 ID
+     * 
+     * @param postId        좋아요를 누를 게시글 ID
      * @param memberAdapter 인증된 사용자 정보
      * @return 성공 응답
      */
     @PostMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요", description = "게시글에 좋아요를 추가합니다.")
     public ApiResponse<Void> addLike(
-            @PathVariable Long postId,
-            @AuthenticationPrincipal MemberAdapter memberAdapter
-    ) {
+            @Parameter(description = "좋아요를 누를 게시글 ID") @PathVariable Long postId,
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         postService.addLike(postId, memberAdapter.getMember().getId());
         return ApiResponse.success();
     }
 
     /**
      * 게시글 좋아요 취소
-     * @param postId 좋아요를 취소할 게시글 ID
+     * 
+     * @param postId        좋아요를 취소할 게시글 ID
      * @param memberAdapter 인증된 사용자 정보
      * @return 성공 응답
      */
     @DeleteMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 취소", description = "게시글의 좋아요를 취소합니다.")
     public ApiResponse<Void> removeLike(
-            @PathVariable Long postId,
-            @AuthenticationPrincipal MemberAdapter memberAdapter
-    ) {
+            @Parameter(description = "좋아요를 취소할 게시글 ID") @PathVariable Long postId,
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         postService.removeLike(postId, memberAdapter.getMember().getId());
         return ApiResponse.success();
     }
 
     /**
      * 게시글 수정
-     * @param postId 수정할 게시글 ID
-     * @param request 게시글 수정 요청 DTO
+     * 
+     * @param postId        수정할 게시글 ID
+     * @param request       게시글 수정 요청 DTO
      * @param memberAdapter 인증된 사용자 정보
      * @return 수정된 게시글 상세 정보
      */
     @PutMapping("/{postId}")
     @Operation(summary = "게시글 수정", description = "작성자가 게시글을 수정합니다.")
     public ApiResponse<PostResponse> updatePost(
-            @PathVariable Long postId,
+            @Parameter(description = "수정할 게시글 ID") @PathVariable Long postId,
             @Valid @RequestBody PostUpdateRequest request,
-            @AuthenticationPrincipal MemberAdapter memberAdapter
-    ) {
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         PostResponse response = postService.updatePost(postId, request, memberAdapter.getMember());
         return ApiResponse.success(response);
     }
 
     /**
      * 게시글 삭제
-     * @param postId 삭제할 게시글 ID
+     * 
+     * @param postId        삭제할 게시글 ID
      * @param memberAdapter 인증된 사용자 정보
      * @return 성공 응답
      */
     @DeleteMapping("/{postId}")
     @Operation(summary = "게시글 삭제", description = "작성자가 게시글을 삭제합니다.")
     public ApiResponse<Void> deletePost(
-            @PathVariable Long postId,
-            @AuthenticationPrincipal MemberAdapter memberAdapter
-    ) {
+            @Parameter(description = "삭제할 게시글 ID") @PathVariable Long postId,
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         postService.deletePost(postId, memberAdapter.getMember());
         return ApiResponse.success();
     }
