@@ -108,7 +108,7 @@ public class PostService {
     public void addLike(Long postId, Long memberId) {
         if (memberId == null)
             throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        if (postLikeRepository.findByAuthorIdAndPostId(memberId, postId).isPresent())
+        if (postLikeRepository.findLike(memberId, postId).isPresent())
             return;
 
         Post post = postQueryRepository.findByIdWithPessimisticLock(postId)
@@ -128,7 +128,7 @@ public class PostService {
     public void removeLike(Long postId, Long memberId) {
         if (memberId == null)
             throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        PostLike postLike = postLikeRepository.findByAuthorIdAndPostId(memberId, postId).orElse(null);
+        PostLike postLike = postLikeRepository.findLike(memberId, postId).orElse(null);
         if (postLike == null)
             return;
 
