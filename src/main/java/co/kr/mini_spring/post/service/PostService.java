@@ -139,17 +139,15 @@ public class PostService {
     }
 
     /**
-     * 게시글 목록 조회 (커서 기반 페이징)
+     * 게시글 목록 조회 (오프셋 기반 페이징)
      */
-    public CursorResponse<PostSummaryResponse> getPublishedPosts(Long lastId, int size, String keyword,
-            List<String> hashtags, Long authorId) {
-        List<Post> posts = postQueryRepository.findAllByPublishedCursor(true, lastId, size, keyword, hashtags,
-                authorId);
-        boolean hasNext = posts.size() > size;
-        List<Post> content = hasNext ? posts.subList(0, size) : posts;
-        Long nextCursor = content.isEmpty() ? null : content.get(content.size() - 1).getId();
+    public co.kr.mini_spring.global.common.response.PageResponse<PostSummaryResponse> getPublishedPosts(
+            org.springframework.data.domain.Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
+        
+        org.springframework.data.domain.Page<Post> postPage = postQueryRepository.findAllByPublishedPage(
+                true, keyword, hashtags, authorId, pageable);
 
-        Set<Long> authorIds = content.stream()
+        Set<Long> authorIds = postPage.getContent().stream()
                 .map(Post::getAuthorId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
@@ -157,10 +155,18 @@ public class PostService {
         Map<Long, SocialMember> authorMap = socialMemberRepository.findAllById(authorIds).stream()
                 .collect(Collectors.toMap(SocialMember::getId, Function.identity()));
 
-        List<PostSummaryResponse> responseContent = content.stream()
+        List<PostSummaryResponse> responseContent = postPage.getContent().stream()
                 .map(post -> new PostSummaryResponse(post, authorMap.get(post.getAuthorId())))
                 .collect(Collectors.toList());
-        return new CursorResponse<>(responseContent, nextCursor, hasNext);
+
+        return new co.kr.mini_spring.global.common.response.PageResponse<>(
+                responseContent,
+                postPage.getNumber(),
+                postPage.getSize(),
+                postPage.getTotalElements(),
+                postPage.getTotalPages(),
+                postPage.hasNext()
+        );
     }
 
     /**

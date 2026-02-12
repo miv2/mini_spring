@@ -1,27 +1,28 @@
 package co.kr.mini_spring.auth.oauth.handler;
 
+import co.kr.mini_spring.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
 import co.kr.mini_spring.auth.token.domain.RefreshToken;
 import co.kr.mini_spring.auth.token.repository.RefreshTokenRepository;
-import co.kr.mini_spring.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
 import co.kr.mini_spring.global.security.JwtTokenProvider;
-import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseCookie;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
-import org.springframework.http.ResponseCookie;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -34,7 +35,7 @@ import java.util.Map;
 public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
     private final JwtTokenProvider jwtTokenProvider;
-    private final SocialMemberRepository socialMemberRepository; // SocialMember 조회를 위해 주입
+    private final SocialMemberRepository socialMemberRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
@@ -93,16 +94,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         addTokenCookies(request, response, accessTokenInfo, refreshTokenInfo);
 
-        String baseUri = org.springframework.web.servlet.support.ServletUriComponentsBuilder
-                .fromRequestUri(request)
-                .replacePath(request.getContextPath())
-                .replaceQuery(null)
-                .build()
-                .toUriString();
-
-        return UriComponentsBuilder.fromUriString(baseUri)
-                .path("/")
-                .build().toUriString();
+        return "http://localhost:5173/home";
     }
 
     private String resolveEmail(String registrationId, Map<String, Object> attributes) {

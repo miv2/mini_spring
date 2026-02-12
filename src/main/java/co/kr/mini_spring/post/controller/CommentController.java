@@ -1,7 +1,7 @@
 package co.kr.mini_spring.post.controller;
 
 import co.kr.mini_spring.global.common.response.ApiResponse;
-import co.kr.mini_spring.global.common.response.CursorResponse;
+import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import co.kr.mini_spring.post.dto.request.CommentCreateRequest;
 import co.kr.mini_spring.post.dto.request.CommentUpdateRequest;
@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,22 +26,23 @@ public class CommentController {
     private final CommentService commentService;
 
     /**
-     * 특정 게시글의 댓글을 커서 기반 페이징으로 조회합니다.
+     * 특정 게시글의 댓글을 오프셋 기반 페이징으로 조회합니다.
      * 
      * @param postId        게시글 ID
-     * @param lastId        마지막으로 조회된 댓글 ID (커서)
+     * @param page          페이지 번호 (0부터 시작)
      * @param size          페이지 크기
      * @param memberAdapter 인증된 사용자 정보
-     * @return 댓글/대댓글 커서 페이징 응답
+     * @return 댓글/대댓글 페이지 응답
      */
-    @Operation(summary = "댓글 목록 조회", description = "특정 게시글의 최상위 댓글을 커서 기반 페이징으로 조회합니다. 대댓글은 children에 포함됩니다.")
+    @Operation(summary = "댓글 목록 조회", description = "특정 게시글의 최상위 댓글을 오프셋 기반 페이징으로 조회합니다. 대댓글은 children에 포함됩니다.")
     @GetMapping("/posts/{postId}")
-    public ApiResponse<CursorResponse<CommentResponse>> getComments(
+    public ApiResponse<PageResponse<CommentResponse>> getComments(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
-            @Parameter(description = "마지막 댓글 ID (첫 페이지 요청 시 생략)") @RequestParam(value = "lastId", required = false) Long lastId,
+            @Parameter(description = "페이지 번호 (0부터 시작)") @RequestParam(value = "page", defaultValue = "0") int page,
             @Parameter(description = "페이지 크기") @RequestParam(value = "size", defaultValue = "10") int size,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
-        return ApiResponse.success(commentService.getComments(postId, lastId, size, memberAdapter.getMember()));
+        Pageable pageable = PageRequest.of(page, size);
+        return ApiResponse.success(commentService.getComments(postId, pageable, memberAdapter != null ? memberAdapter.getMember() : null));
     }
 
     /**

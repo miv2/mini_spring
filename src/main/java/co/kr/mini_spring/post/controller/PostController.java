@@ -1,24 +1,25 @@
 package co.kr.mini_spring.post.controller;
 
-import co.kr.mini_spring.global.common.response.CursorResponse;
+import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import co.kr.mini_spring.post.dto.request.PostCreateRequest;
 import co.kr.mini_spring.post.dto.request.PostUpdateRequest;
 import co.kr.mini_spring.post.dto.response.PostResponse;
 import co.kr.mini_spring.post.dto.response.PostSummaryResponse;
 import co.kr.mini_spring.post.service.PostService;
-import co.kr.mini_spring.global.common.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -29,25 +30,28 @@ public class PostController {
     private final PostService postService;
 
     /**
-     * 모든 공개된 게시글 목록을 커서 기반 페이징으로 조회합니다.
+     * 모든 공개된 게시글 목록을 오프셋 기반 페이징으로 조회합니다.
      * 
-     * @param lastId   마지막으로 조회된 게시글 ID (커서)
+     * @param page     페이지 번호 (0부터 시작)
      * @param size     페이지 당 게시글 수
+     * @param sort     정렬 기준 (latest, likes, oldest)
      * @param keyword  제목/본문 키워드 검색
      * @param hashtags 해시태그 이름(복수) 필터
      * @param authorId 작성자 ID 필터
-     * @return 커서 기반 페이징된 게시글 목록
+     * @return 오프셋 기반 페이징된 게시글 목록
      */
-    @Operation(summary = "게시글 목록 조회", description = "공개 게시글을 커서 기반 페이징으로 조회합니다. 무한 스크롤에 최적화되어 있습니다.")
+    @Operation(summary = "게시글 목록 조회", description = "공개 게시글을 오프셋 기반 페이징으로 조회합니다.")
     @GetMapping
-    public ApiResponse<CursorResponse<PostSummaryResponse>> getPublishedPosts(
-            @Parameter(description = "마지막 게시글 ID (첫 페이지 요청 시 생략)") @RequestParam(value = "lastId", required = false) Long lastId,
+    public ApiResponse<PageResponse<PostSummaryResponse>> getPublishedPosts(
+            @Parameter(description = "페이지 번호 (0부터 시작)") @RequestParam(value = "page", defaultValue = "0") int page,
             @Parameter(description = "페이지 크기") @RequestParam(value = "size", defaultValue = "10") int size,
+            @Parameter(description = "정렬 기준 (latest, likes, oldest)") @RequestParam(value = "sort", defaultValue = "latest") String sort,
             @Parameter(description = "제목/본문 키워드 검색") @RequestParam(value = "keyword", required = false) String keyword,
             @Parameter(description = "해시태그 이름(복수 전달 가능)") @RequestParam(value = "hashtags", required = false) List<String> hashtags,
             @Parameter(description = "작성자 ID 필터") @RequestParam(value = "authorId", required = false) Long authorId) {
-        CursorResponse<PostSummaryResponse> response = postService.getPublishedPosts(lastId, size, keyword, hashtags,
-                authorId);
+        
+        Pageable pageable = createPageable(page, size, sort);
+        PageResponse<PostSummaryResponse> response = postService.getPublishedPosts(pageable, keyword, hashtags, authorId);
         return ApiResponse.success(response);
     }
 

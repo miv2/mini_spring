@@ -61,43 +61,51 @@ public class PostQueryRepository {
     }
 
     /**
-     * 게시글 목록을 커서(Keyset) 기반 페이징으로 조회합니다.
-     * - lastId를 기준으로 이전 데이터는 무시하고 다음 데이터부터 조회하여 성능을 최적화합니다.
-     * - size + 1을 조회하여 다음 페이지 존재 여부를 판단합니다.
+     * 게시글 목록을 오프셋 기반 페이징으로 조회합니다.
+     * - Pageable을 통해 offset, limit, sort를 처리합니다.
+     * - 성능을 위해 ID를 먼저 조회한 뒤 실데이터를 Fetch Join으로 가져옵니다.
      */
-    public List<Post> findAllByPublishedCursor(boolean published, Long lastId, int size, String keyword,
-            List<String> hashtagsFilter, Long authorId) {
+    public Page<Post> findAllByPublishedPage(boolean published, String keyword,
+                                            List<String> hashtagsFilter, Long authorId, Pageable pageable) {
         BooleanExpression conditions = post.published.eq(published)
                 .and(post.authorId.isNotNull())
-                .and(ltPostId(lastId)) // 커서 조건 추가
                 .and(applyAuthor(authorId))
                 .and(applyKeyword(keyword))
                 .and(applyHashtagFilter(hashtagsFilter));
 
-        // 1. 커버링 인덱스 스타일로 ID만 먼저 조회 (size + 1)
+        // 1. 전체 카운트 조회
+        Long total = queryFactory.select(post.count())
+                .from(post)
+                .where(conditions)
+                .fetchOne();
+
+        if (total == null || total == 0) {
+            return new PageImpl<>(List.of(), pageable, 0);
+        }
+
+        // 2. 페이징에 맞는 ID 목록 조회
         List<Long> ids = queryFactory.select(post.id)
                 .from(post)
                 .where(conditions)
-                .orderBy(post.id.desc()) // 최신순 고정 (커서 방식의 일반적 정석)
-                .limit(size + 1)
+                .orderBy(buildOrderSpecifiers(pageable).toArray(new OrderSpecifier[0]))
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
                 .fetch();
 
         if (ids.isEmpty()) {
-            return List.of();
+            return new PageImpl<>(List.of(), pageable, total);
         }
 
-        // 2. 조회된 ID들에 해당하는 실데이터 Fetch Join 조회
-        return queryFactory.selectFrom(post)
+        // 3. 실데이터 Fetch Join 조회
+        List<Post> content = queryFactory.selectFrom(post)
                 .leftJoin(post.postHashtags, postHashtag).fetchJoin()
                 .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                 .where(post.id.in(ids))
                 .distinct()
-                .orderBy(post.id.desc())
+                .orderBy(buildOrderSpecifiers(pageable).toArray(new OrderSpecifier[0]))
                 .fetch();
-    }
 
-    private BooleanExpression ltPostId(Long lastId) {
-        return lastId == null ? null : post.id.lt(lastId);
+        return new PageImpl<>(content, pageable, total);
     }
 
     /**

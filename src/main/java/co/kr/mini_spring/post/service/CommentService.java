@@ -1,9 +1,10 @@
 package co.kr.mini_spring.post.service;
 
 import co.kr.mini_spring.global.common.exception.BusinessException;
-import co.kr.mini_spring.global.common.response.CursorResponse;
+import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
+import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.domain.Comment;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.repository.CommentQueryRepository;
@@ -13,16 +14,13 @@ import co.kr.mini_spring.post.domain.repository.PostRepository;
 import co.kr.mini_spring.post.dto.request.CommentCreateRequest;
 import co.kr.mini_spring.post.dto.request.CommentUpdateRequest;
 import co.kr.mini_spring.post.dto.response.CommentResponse;
-import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
-import java.util.Comparator;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -38,25 +36,19 @@ public class CommentService {
     private final SocialMemberRepository socialMemberRepository;
 
     /**
-     * 특정 게시글의 최상위 댓글 목록을 커서 기반 페이징으로 조회합니다.
+     * 특정 게시글의 최상위 댓글 목록을 오프셋 기반 페이징으로 조회합니다.
      *
      * @param postId      게시글 ID
-     * @param lastId      마지막으로 조회된 댓글 ID (첫 페이지 요청 시 null)
-     * @param size        조회할 댓글 개수
+     * @param pageable    페이지 정보
      * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
-     * @return 커서 정보와 댓글 목록을 포함한 응답 DTO
+     * @return 댓글 목록을 포함한 응답 DTO
      */
-    @Transactional(readOnly = true)
-    public CursorResponse<CommentResponse> getComments(Long postId, Long lastId, int size, SocialMember currentUser) {
+    public PageResponse<CommentResponse> getComments(Long postId, Pageable pageable, SocialMember currentUser) {
         postRepository.findById(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
 
-        List<Comment> comments = commentQueryRepository.findAllTopLevelCommentsByPostIdCursor(postId, lastId, size);
-
-        boolean hasNext = comments.size() > size;
-        List<Comment> content = hasNext ? comments.subList(0, size) : comments;
-
-        Long nextCursor = content.isEmpty() ? null : content.get(content.size() - 1).getId();
+        Page<Comment> commentPage = commentQueryRepository.findAllTopLevelCommentsByPostIdPage(postId, pageable);
+        List<Comment> content = commentPage.getContent();
 
         Set<Long> authorIds = content.stream()
                 .map(Comment::getAuthorId)
@@ -77,7 +69,14 @@ public class CommentService {
                 .map(comment -> mapToCommentResponse(comment, currentUser, authorMap))
                 .collect(Collectors.toList());
 
-        return new CursorResponse<>(responseContent, nextCursor, hasNext);
+        return new PageResponse<>(
+                responseContent,
+                commentPage.getNumber(),
+                commentPage.getSize(),
+                commentPage.getTotalElements(),
+                commentPage.getTotalPages(),
+                commentPage.hasNext()
+        );
     }
 
     /**
@@ -116,7 +115,6 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
         postQueryRepository.incrementCommentCount(post.getId());
 
-        // Create 시에는 children 없음
         return new CommentResponse(savedComment, member, member, List.of());
     }
 
@@ -138,17 +136,11 @@ public class CommentService {
         }
 
         comment.updateContent(request.getContent());
-        // Update 시 children 유지 필요하지만, 응답에서는 보통 본문만 중요하거나, 다시 조회함.
-        // 여기서는 children 빈 리스트 반환 혹은 다시 로딩.
-        // 성능상 children 없이 반환.
         return new CommentResponse(comment, member, member, List.of());
     }
 
     /**
      * 댓글을 삭제합니다.
-     * - 대댓글이 달려있는 댓글인 경우, 데이터 정합성을 위해 내용을 비우고 상태만 '삭제됨'으로 변경합니다 (소프트 삭제).
-     * - 대댓글이 없는 경우 DB에서 즉시 삭제합니다.
-     * - 부모 댓글이 이미 '삭제됨' 상태인 경우, 마지막 자식 댓글이 삭제될 때 부모 댓글도 함께 완전히 삭제됩니다.
      *
      * @param commentId 삭제할 댓글 ID
      * @param member    인증된 삭제 시도자 정보

@@ -24,22 +24,28 @@ public class CommentQueryRepository {
     private static final QComment comment = QComment.comment;
 
     /**
-     * 특정 게시글의 최상위 댓글 목록을 커서 기반 페이징으로 조회합니다.
+     * 특정 게시글의 최상위 댓글 목록을 오프셋 기반 페이징으로 조회합니다.
      */
-    public List<Comment> findAllTopLevelCommentsByPostIdCursor(Long postId, Long lastId, int size) {
-        return queryFactory
+    public Page<Comment> findAllTopLevelCommentsByPostIdPage(Long postId, Pageable pageable) {
+        List<Comment> content = queryFactory
                 .selectFrom(comment)
                 .where(
                         comment.post.id.eq(postId),
-                        comment.parent.isNull(),
-                        ltCommentId(lastId))
+                        comment.parent.isNull())
                 .orderBy(comment.id.desc())
-                .limit(size + 1)
+                .offset(pageable.getOffset())
+                .limit(pageable.getPageSize())
                 .fetch();
-    }
 
-    private com.querydsl.core.types.dsl.BooleanExpression ltCommentId(Long lastId) {
-        return lastId == null ? null : comment.id.lt(lastId);
+        long total = queryFactory
+                .select(comment.count())
+                .from(comment)
+                .where(
+                        comment.post.id.eq(postId),
+                        comment.parent.isNull())
+                .fetchOne();
+
+        return new PageImpl<>(content, pageable, total);
     }
 
     /**
