@@ -43,5 +43,28 @@ class AuthControllerLogoutTest {
         verify(valueOps).set(startsWith("bl:access:"), eq("1"), any(Duration.class));
     }
 
-    // TTL 검증 테스트는 다음 커밋에서 추가
+    @Test
+    void logout_sets_blacklist_with_ttl() {
+        AuthService authService = mock(AuthService.class);
+        JwtTokenProvider jwtTokenProvider = mock(JwtTokenProvider.class);
+        StringRedisTemplate redisTemplate = mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked")
+        ValueOperations<String, String> valueOps = mock(ValueOperations.class);
+        when(redisTemplate.opsForValue()).thenReturn(valueOps);
+
+        AuthController controller = new AuthController(authService, jwtTokenProvider, redisTemplate);
+
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        MemberAdapter memberAdapter = mock(MemberAdapter.class);
+
+        when(memberAdapter.getUsername()).thenReturn("user@example.com");
+        when(request.getHeader("Authorization")).thenReturn("Bearer access-token");
+        when(jwtTokenProvider.getExpiresAt("access-token"))
+                .thenReturn(LocalDateTime.now().plusSeconds(120));
+
+        controller.logout(memberAdapter, request, response);
+
+        verify(valueOps).set(startsWith("bl:access:"), eq("1"), argThat(ttl -> ttl != null && ttl.getSeconds() > 0));
+    }
 }
