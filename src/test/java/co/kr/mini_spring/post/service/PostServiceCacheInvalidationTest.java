@@ -5,7 +5,6 @@ import co.kr.mini_spring.member.domain.MemberRole;
 import co.kr.mini_spring.member.domain.MemberStatus;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
-import co.kr.mini_spring.post.cache.PostCacheKey;
 import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.PostLike;
@@ -22,7 +21,7 @@ import static org.mockito.Mockito.*;
 class PostServiceCacheInvalidationTest {
 
     @Test
-    void deletePost_evictsDetailAndLists() {
+    void deletePost_evictsLists() {
         PostRepository postRepository = mock(PostRepository.class);
         PostQueryRepository postQueryRepository = mock(PostQueryRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
@@ -57,12 +56,11 @@ class PostServiceCacheInvalidationTest {
 
         postService.deletePost(10L, member);
 
-        verify(cacheService).evict(PostCacheKey.detail(10L));
         verify(cacheService).evictLists();
     }
 
     @Test
-    void addLike_evictsDetailAndLists() {
+    void addLike_evictsLists() {
         PostRepository postRepository = mock(PostRepository.class);
         PostQueryRepository postQueryRepository = mock(PostQueryRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
@@ -87,7 +85,6 @@ class PostServiceCacheInvalidationTest {
 
         postService.addLike(12L, 3L);
 
-        verify(cacheService).evict(PostCacheKey.detail(12L));
         verify(cacheService).evictLists();
     }
 }

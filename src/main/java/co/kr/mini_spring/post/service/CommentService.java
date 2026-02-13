@@ -5,7 +5,6 @@ import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
-import co.kr.mini_spring.post.cache.PostCacheKey;
 import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Comment;
 import co.kr.mini_spring.post.domain.Post;
@@ -117,7 +116,6 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
         postQueryRepository.incrementCommentCount(post.getId());
-        postCacheService.evict(PostCacheKey.detail(post.getId()));
         postCacheService.evictLists();
 
         return new CommentResponse(savedComment, member, member, List.of());
@@ -174,7 +172,6 @@ public class CommentService {
                 postQueryRepository.decrementCommentCount(postId);
             }
         }
-        postCacheService.evict(PostCacheKey.detail(postId));
         postCacheService.evictLists();
     }
 

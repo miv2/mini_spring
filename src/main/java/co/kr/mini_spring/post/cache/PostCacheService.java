@@ -16,19 +16,12 @@ public class PostCacheService {
     @Value("${cache.post.list-ttl-seconds:60}")
     private long listTtlSeconds;
 
-    @Value("${cache.post.detail-ttl-seconds:180}")
-    private long detailTtlSeconds;
-
     public Optional<Object> get(String key) {
         return Optional.ofNullable(redisTemplate.opsForValue().get(key));
     }
 
     public void putList(String key, Object value) {
         redisTemplate.opsForValue().set(key, value, Duration.ofSeconds(listTtlSeconds));
-    }
-
-    public void putDetail(String key, Object value) {
-        redisTemplate.opsForValue().set(key, value, Duration.ofSeconds(detailTtlSeconds));
     }
 
     public void evict(String key) {

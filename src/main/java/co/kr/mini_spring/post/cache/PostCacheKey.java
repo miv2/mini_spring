@@ -13,10 +13,6 @@ public final class PostCacheKey {
         return "posts:list:" + page + ":" + size + ":" + sort + ":" + normalizedKeyword + ":" + normalizedHashtags + ":" + normalizedAuthor;
     }
 
-    public static String detail(Long postId) {
-        return "posts:detail:" + postId;
-    }
-
     private static String normalizeHashtags(List<String> hashtags) {
         if (hashtags == null || hashtags.isEmpty()) return "";
         return hashtags.stream()

@@ -42,7 +42,6 @@ jwt:
 cache:
   post:
     list-ttl-seconds: 60
-    detail-ttl-seconds: 180
 
 springdoc:
   querydsl:

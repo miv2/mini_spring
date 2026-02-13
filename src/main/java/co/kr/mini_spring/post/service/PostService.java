@@ -55,7 +55,6 @@ public class PostService {
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
         postCacheService.evictLists();
-        postCacheService.evict(PostCacheKey.detail(post.getId()));
         return new PostResponse(post, member, member, 0);
     }
 
@@ -64,14 +63,6 @@ public class PostService {
      */
     @Transactional
     public PostResponse getPost(Long postId, SocialMember currentUser) {
-        if (currentUser == null) {
-            String detailKey = PostCacheKey.detail(postId);
-            Object cached = postCacheService.get(detailKey).orElse(null);
-            if (cached instanceof PostResponse cachedResponse) {
-                return cachedResponse;
-            }
-        }
-
         Post post = postQueryRepository.findByIdWithAllRelations(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
         if (post.getAuthorId() == null)
@@ -82,11 +73,7 @@ public class PostService {
             viewCountOverride = postQueryRepository.findViewCountById(post.getId());
         }
         SocialMember author = socialMemberRepository.findById(post.getAuthorId()).orElse(null);
-        PostResponse response = new PostResponse(post, author, currentUser, viewCountOverride);
-        if (currentUser == null) {
-            postCacheService.putDetail(PostCacheKey.detail(postId), response);
-        }
-        return response;
+        return new PostResponse(post, author, currentUser, viewCountOverride);
     }
 
     /**
@@ -100,7 +87,6 @@ public class PostService {
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_UPDATE_POST);
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
-        postCacheService.evict(PostCacheKey.detail(postId));
         postCacheService.evictLists();
         return new PostResponse(post, member, member, null);
     }
@@ -115,7 +101,6 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_DELETE_POST);
         post.delete();
-        postCacheService.evict(PostCacheKey.detail(postId));
         postCacheService.evictLists();
     }
 
@@ -137,7 +122,6 @@ public class PostService {
                 .build();
         postLikeRepository.save(newLike);
         post.increaseLikeCount();
-        postCacheService.evict(PostCacheKey.detail(postId));
         postCacheService.evictLists();
     }
 
@@ -156,7 +140,6 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
         postLikeRepository.delete(postLike);
         post.decreaseLikeCount();
-        postCacheService.evict(PostCacheKey.detail(postId));
         postCacheService.evictLists();
     }
 
