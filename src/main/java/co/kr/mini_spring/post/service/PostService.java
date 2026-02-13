@@ -54,6 +54,8 @@ public class PostService {
                 .build();
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
+        postCacheService.evictLists();
+        postCacheService.evict(PostCacheKey.detail(post.getId()));
         return new PostResponse(post, member, member, 0);
     }
 
@@ -98,6 +100,8 @@ public class PostService {
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_UPDATE_POST);
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
+        postCacheService.evict(PostCacheKey.detail(postId));
+        postCacheService.evictLists();
         return new PostResponse(post, member, member, null);
     }
 
@@ -111,6 +115,8 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_DELETE_POST);
         post.delete();
+        postCacheService.evict(PostCacheKey.detail(postId));
+        postCacheService.evictLists();
     }
 
     /**
@@ -131,6 +137,8 @@ public class PostService {
                 .build();
         postLikeRepository.save(newLike);
         post.increaseLikeCount();
+        postCacheService.evict(PostCacheKey.detail(postId));
+        postCacheService.evictLists();
     }
 
     /**
@@ -148,6 +156,8 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
         postLikeRepository.delete(postLike);
         post.decreaseLikeCount();
+        postCacheService.evict(PostCacheKey.detail(postId));
+        postCacheService.evictLists();
     }
 
     /**

@@ -5,6 +5,8 @@ import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
+import co.kr.mini_spring.post.cache.PostCacheKey;
+import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Comment;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.repository.CommentQueryRepository;
@@ -34,6 +36,7 @@ public class CommentService {
     private final PostRepository postRepository;
     private final PostQueryRepository postQueryRepository;
     private final SocialMemberRepository socialMemberRepository;
+    private final PostCacheService postCacheService;
 
     /**
      * 특정 게시글의 최상위 댓글 목록을 오프셋 기반 페이징으로 조회합니다.
@@ -114,6 +117,8 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
         postQueryRepository.incrementCommentCount(post.getId());
+        postCacheService.evict(PostCacheKey.detail(post.getId()));
+        postCacheService.evictLists();
 
         return new CommentResponse(savedComment, member, member, List.of());
     }
@@ -169,6 +174,8 @@ public class CommentService {
                 postQueryRepository.decrementCommentCount(postId);
             }
         }
+        postCacheService.evict(PostCacheKey.detail(postId));
+        postCacheService.evictLists();
     }
 
     private CommentResponse mapToCommentResponse(Comment comment, SocialMember currentUser,
