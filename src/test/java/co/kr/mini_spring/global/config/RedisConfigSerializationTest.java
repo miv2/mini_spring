@@ -40,7 +40,7 @@ class RedisConfigSerializationTest {
                 .build();
 
         PageResponse<PostSummaryResponse> response = new PageResponse<>(
-                List.of(new PostSummaryResponse(post, author)),
+                List.of(new PostSummaryResponse(post, author, "/uploads/default-profile.png")),
                 0, 10, 1, 1, false
         );
 

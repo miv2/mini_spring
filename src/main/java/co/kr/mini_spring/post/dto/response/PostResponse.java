@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Getter
 @JsonPropertyOrder({
         "id", "title", "content", "viewCount", "likeCount",
-        "memberId", "memberName", "isOwner", "isLiked", "hashtags", "createdAt", "updatedAt"
+        "memberId", "memberName", "profileImageUrl", "isOwner", "isLiked", "hashtags", "createdAt", "updatedAt"
 })
 @Schema(description = "게시글 상세 정보 응답")
 public class PostResponse {
@@ -41,6 +41,9 @@ public class PostResponse {
     @Schema(description = "작성자 닉네임")
     private final String memberName;
 
+    @Schema(description = "작성자 프로필 이미지 URL")
+    private final String profileImageUrl;
+
     @Schema(description = "본인 글 여부 (수정/삭제 권한 확인용)")
     private final boolean isOwner;
 
@@ -64,7 +67,7 @@ public class PostResponse {
      * @param post        게시글 엔티티
      * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
      */
-    public PostResponse(Post post, SocialMember author, SocialMember currentUser, Integer viewCountOverride, boolean isLiked) {
+    public PostResponse(Post post, SocialMember author, SocialMember currentUser, Integer viewCountOverride, boolean isLiked, String defaultProfileImage) {
         this.id = post.getId();
         this.title = post.getTitle();
         this.content = post.getContent();
@@ -72,6 +75,7 @@ public class PostResponse {
         this.likeCount = post.getLikeCount();
         this.memberId = post.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
 

@@ -16,6 +16,7 @@ import co.kr.mini_spring.post.dto.request.PostUpdateRequest;
 import co.kr.mini_spring.post.dto.response.PostResponse;
 import co.kr.mini_spring.post.dto.response.PostSummaryResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,9 @@ public class PostService {
     private final RedisTemplate<String, Object> redisTemplate;
     private final PostCacheService postCacheService;
 
+    @Value("${file.default-profile-image:/uploads/default-profile.png}")
+    private String defaultProfileImage;
+
     private static final Duration VIEW_COUNT_INTERVAL = Duration.ofHours(1);
 
     /**
@@ -53,7 +57,7 @@ public class PostService {
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
         postCacheService.evictLists();
-        return new PostResponse(post, member, member, 0, false);
+        return new PostResponse(post, member, member, 0, false, defaultProfileImage);
     }
 
     /**
@@ -73,7 +77,7 @@ public class PostService {
         SocialMember author = post.getAuthor();
         boolean isLiked = currentUser != null
                 && postLikeRepository.findLike(currentUser.getId(), postId).isPresent();
-        return new PostResponse(post, author, currentUser, viewCountOverride, isLiked);
+        return new PostResponse(post, author, currentUser, viewCountOverride, isLiked, defaultProfileImage);
     }
 
     /**
@@ -88,7 +92,7 @@ public class PostService {
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
         postCacheService.evictLists();
-        return new PostResponse(post, member, member, null, false);
+        return new PostResponse(post, member, member, null, false, defaultProfileImage);
     }
 
     /**
@@ -167,7 +171,7 @@ public class PostService {
                 true, keyword, hashtags, authorId, pageable);
 
         List<PostSummaryResponse> responseContent = postPage.getContent().stream()
-                .map(post -> new PostSummaryResponse(post, post.getAuthor()))
+                .map(post -> new PostSummaryResponse(post, post.getAuthor(), defaultProfileImage))
                 .collect(Collectors.toList());
 
         PageResponse<PostSummaryResponse> response = new PageResponse<>(

@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 @Getter
 @JsonPropertyOrder({
-        "id", "title", "memberId", "memberName", "likeCount", "viewCount", "commentCount", "hashtags", "createdAt"
+        "id", "title", "memberId", "memberName", "profileImageUrl", "likeCount", "viewCount", "commentCount", "hashtags", "createdAt"
 })
 @Schema(description = "게시글 목록 요약 응답")
 public class PostSummaryResponse {
@@ -29,6 +29,9 @@ public class PostSummaryResponse {
 
     @Schema(description = "작성자 닉네임")
     private final String memberName;
+
+    @Schema(description = "작성자 프로필 이미지 URL")
+    private final String profileImageUrl;
 
     @Schema(description = "좋아요 수")
     private final int likeCount;
@@ -46,11 +49,12 @@ public class PostSummaryResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private final LocalDateTime createdAt;
 
-    public PostSummaryResponse(Post post, SocialMember author) {
+    public PostSummaryResponse(Post post, SocialMember author, String defaultProfileImage) {
         this.id = post.getId();
         this.title = post.getTitle();
         this.memberId = post.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
         this.likeCount = post.getLikeCount();
         this.viewCount = post.getViewCount();
         this.commentCount = post.getCommentCount();
