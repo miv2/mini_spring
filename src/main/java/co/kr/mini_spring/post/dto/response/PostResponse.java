@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Getter
 @JsonPropertyOrder({
         "id", "title", "content", "viewCount", "likeCount",
-        "memberId", "memberName", "isOwner", "hashtags", "createdAt", "updatedAt"
+        "memberId", "memberName", "isOwner", "isLiked", "hashtags", "createdAt", "updatedAt"
 })
 @Schema(description = "게시글 상세 정보 응답")
 public class PostResponse {
@@ -44,6 +44,9 @@ public class PostResponse {
     @Schema(description = "본인 글 여부 (수정/삭제 권한 확인용)")
     private final boolean isOwner;
 
+    @Schema(description = "좋아요 여부")
+    private final boolean isLiked;
+
     @Schema(description = "해시태그 목록")
     private final Set<String> hashtags;
 
@@ -61,7 +64,7 @@ public class PostResponse {
      * @param post        게시글 엔티티
      * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
      */
-    public PostResponse(Post post, SocialMember author, SocialMember currentUser, Integer viewCountOverride) {
+    public PostResponse(Post post, SocialMember author, SocialMember currentUser, Integer viewCountOverride, boolean isLiked) {
         this.id = post.getId();
         this.title = post.getTitle();
         this.content = post.getContent();
@@ -73,6 +76,7 @@ public class PostResponse {
         this.updatedAt = post.getUpdatedAt();
 
         this.isOwner = (currentUser != null && author != null) && Objects.equals(author.getId(), currentUser.getId());
+        this.isLiked = isLiked;
 
         this.hashtags = post.getPostHashtags().stream()
                 .map(postHashtag -> postHashtag.getHashtag().getName())
