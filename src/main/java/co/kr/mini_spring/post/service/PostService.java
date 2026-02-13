@@ -53,7 +53,7 @@ public class PostService {
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
         postCacheService.evictLists();
-        return new PostResponse(post, member, member, 0);
+        return new PostResponse(post, member, member, 0, false);
     }
 
     /**
@@ -71,7 +71,9 @@ public class PostService {
             viewCountOverride = postQueryRepository.findViewCountById(post.getId());
         }
         SocialMember author = post.getAuthor();
-        return new PostResponse(post, author, currentUser, viewCountOverride);
+        boolean isLiked = currentUser != null
+                && postLikeRepository.findLike(currentUser.getId(), postId).isPresent();
+        return new PostResponse(post, author, currentUser, viewCountOverride, isLiked);
     }
 
     /**
@@ -86,7 +88,7 @@ public class PostService {
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
         postCacheService.evictLists();
-        return new PostResponse(post, member, member, null);
+        return new PostResponse(post, member, member, null, false);
     }
 
     /**
