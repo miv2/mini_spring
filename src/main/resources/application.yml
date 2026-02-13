@@ -39,6 +39,11 @@ jwt:
   access-token-expiration: 3600000  # 1시간
   refresh-token-expiration: 604800000 # 7일
 
+cache:
+  post:
+    list-ttl-seconds: 60
+    detail-ttl-seconds: 180
+
 springdoc:
   querydsl:
     enabled: false
