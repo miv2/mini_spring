@@ -134,6 +134,16 @@ public class JwtTokenProvider {
     }
 
     /**
+     * 토큰 만료 시각 추출
+     */
+    public LocalDateTime getExpiresAt(String token) {
+        Claims claims = Jwts.parserBuilder().setSigningKey(secretKey).build()
+                .parseClaimsJws(token).getBody();
+        Date exp = claims.getExpiration();
+        return LocalDateTime.ofInstant(exp.toInstant(), ZoneId.systemDefault());
+    }
+
+    /**
      * JWT 검증 결과 DTO.
      */
     @Getter

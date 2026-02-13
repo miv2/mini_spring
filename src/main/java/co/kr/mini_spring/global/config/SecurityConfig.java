@@ -9,6 +9,7 @@ import co.kr.mini_spring.global.security.JwtAccessDeniedHandler;
 import co.kr.mini_spring.global.security.JwtAuthenticationEntryPoint;
 import co.kr.mini_spring.global.security.JwtAuthenticationFilter;
 import co.kr.mini_spring.global.security.JwtTokenProvider;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -39,10 +40,11 @@ public class SecurityConfig {
         private final OAuth2AuthenticationSuccessHandler oAuth2AuthenticationSuccessHandler;
         private final OAuth2AuthenticationFailureHandler oAuth2AuthenticationFailureHandler;
         private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
+        private final StringRedisTemplate stringRedisTemplate;
 
         @Bean
         public JwtAuthenticationFilter jwtAuthenticationFilter() {
-                return new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService);
+                return new JwtAuthenticationFilter(jwtTokenProvider, customUserDetailsService, stringRedisTemplate);
         }
 
         @Bean
@@ -71,11 +73,11 @@ public class SecurityConfig {
                                                                 "/login",
                                                                 "/login/**",
                                                                 "/api/auth/signup",
-                                                                "/api/auth/login",
-                                                                "/api/auth/refresh",
-                                                                "/oauth2/**",
-                                                                "/login/oauth2/code/**",
-                                                                "/oauth/callback")
+                                                "/api/auth/login",
+                                                "/api/auth/refresh",
+                                                "/oauth2/**",
+                                                "/login/oauth2/code/**",
+                                                "/oauth/callback")
                                                 .permitAll()
                                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                                                 .anyRequest().authenticated())

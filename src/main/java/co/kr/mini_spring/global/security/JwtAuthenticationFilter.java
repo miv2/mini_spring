@@ -8,13 +8,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
+import co.kr.mini_spring.global.common.response.ResponseCode;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.io.IOException;
+import java.time.Duration;
 
 /**
  * JWT 인증 필터
@@ -27,9 +30,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String BLACKLIST_PREFIX = "bl:access:";
 
     private final JwtTokenProvider jwtTokenProvider;
     private final UserDetailsService userDetailsService;
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     protected void doFilterInternal(
@@ -47,6 +52,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 JwtTokenProvider.JwtValidationResult validation = jwtTokenProvider.validateTokenWithResult(jwt);
                 if (!validation.isValid()) {
                     request.setAttribute(JwtTokenProvider.JWT_ERROR_CODE_ATTRIBUTE, validation.getErrorCode());
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                if (isBlacklisted(jwt)) {
+                    request.setAttribute(JwtTokenProvider.JWT_ERROR_CODE_ATTRIBUTE, ResponseCode.INVALID_TOKEN);
                     filterChain.doFilter(request, response);
                     return;
                 }
@@ -106,5 +117,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         return null;
+    }
+
+    // Redis 블랙리스트에 등록된 access token은 즉시 차단
+    private boolean isBlacklisted(String token) {
+        try {
+            String key = BLACKLIST_PREFIX + token;
+            Boolean exists = stringRedisTemplate.hasKey(key);
+            return Boolean.TRUE.equals(exists);
+        } catch (Exception e) {
+            log.warn("[JWT 블랙리스트 확인 실패] {}", e.getMessage());
+            return false; // 블랙리스트 장애 시 서비스는 유지
+        }
     }
 }

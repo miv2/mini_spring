@@ -16,8 +16,18 @@ import org.springdoc.core.models.GroupedOpenApi;
 import java.util.List;
 
 @Configuration
-@OpenAPIDefinition(info = @Info(title = "mini_spring API", description = "게시글/댓글 플랫폼 REST API 명세", version = "v1", contact = @Contact(name = "mini_spring")), security = @SecurityRequirement(name = OpenApiConfig.BEARER_SCHEME))
-@SecurityScheme(name = OpenApiConfig.BEARER_SCHEME, type = io.swagger.v3.oas.annotations.enums.SecuritySchemeType.HTTP, scheme = "bearer", bearerFormat = "JWT")
+@OpenAPIDefinition(
+    info = @Info(
+        title = "mini_spring API",
+        description = "게시글/댓글 플랫폼 REST API 명세\n\n" +
+                      "### 인증 안내\n" +
+                      "- 이 API는 **JWT(Header 기반)**와 **HttpOnly Cookie(accessToken/refreshToken)** 방식을 모두 지원합니다.\n" +
+                      "- 소셜 로그인 성공 시 자동으로 쿠키가 설정되며, 이후 요청 시 `withCredentials: true` 설정을 권장합니다.",
+        version = "v1",
+        contact = @Contact(name = "mini_spring")
+    ),
+    security = @SecurityRequirement(name = OpenApiConfig.BEARER_SCHEME)
+)
 public class OpenApiConfig {
 
         static final String BEARER_SCHEME = "BearerAuth";

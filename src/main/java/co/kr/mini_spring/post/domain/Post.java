@@ -1,5 +1,6 @@
 package co.kr.mini_spring.post.domain;
 
+import co.kr.mini_spring.member.domain.SocialMember;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -52,6 +53,10 @@ public class Post {
 
     @Column(name = "author_id")
     private Long authorId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "author_id", insertable = false, updatable = false)
+    private SocialMember author;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

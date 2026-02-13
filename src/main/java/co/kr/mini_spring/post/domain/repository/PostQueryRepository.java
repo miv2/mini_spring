@@ -53,6 +53,7 @@ public class PostQueryRepository {
     public Optional<Post> findByIdWithAllRelations(Long id) {
         return Optional.ofNullable(
                 queryFactory.selectFrom(post)
+                        .leftJoin(post.author).fetchJoin()
                         .leftJoin(post.postHashtags, postHashtag).fetchJoin()
                         .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                         .where(post.id.eq(id))
@@ -98,6 +99,7 @@ public class PostQueryRepository {
 
         // 3. 실데이터 Fetch Join 조회
         List<Post> content = queryFactory.selectFrom(post)
+                .leftJoin(post.author).fetchJoin()
                 .leftJoin(post.postHashtags, postHashtag).fetchJoin()
                 .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                 .where(post.id.in(ids))

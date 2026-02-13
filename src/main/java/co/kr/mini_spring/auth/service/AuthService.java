@@ -55,6 +55,7 @@ public class AuthService {
                                 .generateRefreshToken(member.getEmail());
 
                 refreshToken.updateToken(newRefreshToken.getToken(), newRefreshToken.getExpiresAt());
+                refreshTokenRepository.save(refreshToken);
 
                 log.info("[TokenRefresh] 토큰 갱신 성공 memberId={}, email={}", member.getId(), member.getEmail());
 

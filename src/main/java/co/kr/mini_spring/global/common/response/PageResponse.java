@@ -1,19 +1,36 @@
 package co.kr.mini_spring.global.common.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
 
 @Getter
+@Schema(description = "페이징 응답 공통 객체")
 public class PageResponse<T> {
+    @Schema(description = "데이터 목록")
     private final List<T> content;
+
+    @Schema(description = "현재 페이지 번호 (0부터 시작)")
     private final int pageNumber;
+
+    @Schema(description = "페이지당 데이터 수")
     private final int pageSize;
+
+    @Schema(description = "전체 데이터 수")
     private final long totalElements;
+
+    @Schema(description = "전체 페이지 수")
     private final int totalPages;
+
+    @Schema(description = "다음 페이지 존재 여부")
     private final boolean hasNext;
+
+    @Schema(description = "첫 페이지 여부")
     private final boolean isFirst;
+
+    @Schema(description = "마지막 페이지 여부")
     private final boolean isLast;
 
     public PageResponse(List<T> content, int pageNumber, int pageSize, long totalElements, int totalPages, boolean hasNext) {

@@ -4,7 +4,6 @@ import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
-import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.cache.PostCacheKey;
 import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Post;
@@ -17,6 +16,7 @@ import co.kr.mini_spring.post.dto.request.PostUpdateRequest;
 import co.kr.mini_spring.post.dto.response.PostResponse;
 import co.kr.mini_spring.post.dto.response.PostSummaryResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -34,7 +33,6 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostQueryRepository postQueryRepository;
     private final PostLikeRepository postLikeRepository;
-    private final SocialMemberRepository socialMemberRepository;
     private final HashtagService hashtagService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final PostCacheService postCacheService;
@@ -72,7 +70,7 @@ public class PostService {
         if (currentUser != null && updateViewCount(post, currentUser)) {
             viewCountOverride = postQueryRepository.findViewCountById(post.getId());
         }
-        SocialMember author = socialMemberRepository.findById(post.getAuthorId()).orElse(null);
+        SocialMember author = post.getAuthor();
         return new PostResponse(post, author, currentUser, viewCountOverride);
     }
 
@@ -148,7 +146,6 @@ public class PostService {
      */
     public PageResponse<PostSummaryResponse> getPublishedPosts(
             org.springframework.data.domain.Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
-
         String listKey = PostCacheKey.list(
                 pageable.getPageNumber(),
                 pageable.getPageSize(),
@@ -167,16 +164,8 @@ public class PostService {
         org.springframework.data.domain.Page<Post> postPage = postQueryRepository.findAllByPublishedPage(
                 true, keyword, hashtags, authorId, pageable);
 
-        Set<Long> authorIds = postPage.getContent().stream()
-                .map(Post::getAuthorId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        java.util.Map<Long, SocialMember> authorMap = socialMemberRepository.findAllById(authorIds).stream()
-                .collect(java.util.stream.Collectors.toMap(SocialMember::getId, java.util.function.Function.identity()));
-
         List<PostSummaryResponse> responseContent = postPage.getContent().stream()
-                .map(post -> new PostSummaryResponse(post, authorMap.get(post.getAuthorId())))
+                .map(post -> new PostSummaryResponse(post, post.getAuthor()))
                 .collect(Collectors.toList());
 
         PageResponse<PostSummaryResponse> response = new PageResponse<>(
