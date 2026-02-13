@@ -1,10 +1,12 @@
 package co.kr.mini_spring.post.service;
 
 import co.kr.mini_spring.global.common.exception.BusinessException;
-import co.kr.mini_spring.global.common.response.CursorResponse;
+import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
+import co.kr.mini_spring.post.cache.PostCacheKey;
+import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.PostLike;
 import co.kr.mini_spring.post.domain.repository.PostLikeRepository;
@@ -22,10 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
-import co.kr.mini_spring.member.domain.SocialMember;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +37,7 @@ public class PostService {
     private final SocialMemberRepository socialMemberRepository;
     private final HashtagService hashtagService;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final PostCacheService postCacheService;
 
     private static final Duration VIEW_COUNT_INTERVAL = Duration.ofHours(1);
 
@@ -62,6 +62,14 @@ public class PostService {
      */
     @Transactional
     public PostResponse getPost(Long postId, SocialMember currentUser) {
+        if (currentUser == null) {
+            String detailKey = PostCacheKey.detail(postId);
+            Object cached = postCacheService.get(detailKey).orElse(null);
+            if (cached instanceof PostResponse cachedResponse) {
+                return cachedResponse;
+            }
+        }
+
         Post post = postQueryRepository.findByIdWithAllRelations(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
         if (post.getAuthorId() == null)
@@ -72,7 +80,11 @@ public class PostService {
             viewCountOverride = postQueryRepository.findViewCountById(post.getId());
         }
         SocialMember author = socialMemberRepository.findById(post.getAuthorId()).orElse(null);
-        return new PostResponse(post, author, currentUser, viewCountOverride);
+        PostResponse response = new PostResponse(post, author, currentUser, viewCountOverride);
+        if (currentUser == null) {
+            postCacheService.putDetail(PostCacheKey.detail(postId), response);
+        }
+        return response;
     }
 
     /**
@@ -141,9 +153,24 @@ public class PostService {
     /**
      * 게시글 목록 조회 (오프셋 기반 페이징)
      */
-    public co.kr.mini_spring.global.common.response.PageResponse<PostSummaryResponse> getPublishedPosts(
+    public PageResponse<PostSummaryResponse> getPublishedPosts(
             org.springframework.data.domain.Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
-        
+
+        String listKey = PostCacheKey.list(
+                pageable.getPageNumber(),
+                pageable.getPageSize(),
+                pageable.getSort().toString(),
+                keyword,
+                hashtags,
+                authorId
+        );
+        Object cached = postCacheService.get(listKey).orElse(null);
+        if (cached instanceof PageResponse<?> cachedResponse) {
+            @SuppressWarnings("unchecked")
+            PageResponse<PostSummaryResponse> response = (PageResponse<PostSummaryResponse>) cachedResponse;
+            return response;
+        }
+
         org.springframework.data.domain.Page<Post> postPage = postQueryRepository.findAllByPublishedPage(
                 true, keyword, hashtags, authorId, pageable);
 
@@ -152,14 +179,14 @@ public class PostService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Map<Long, SocialMember> authorMap = socialMemberRepository.findAllById(authorIds).stream()
-                .collect(Collectors.toMap(SocialMember::getId, Function.identity()));
+        java.util.Map<Long, SocialMember> authorMap = socialMemberRepository.findAllById(authorIds).stream()
+                .collect(java.util.stream.Collectors.toMap(SocialMember::getId, java.util.function.Function.identity()));
 
         List<PostSummaryResponse> responseContent = postPage.getContent().stream()
                 .map(post -> new PostSummaryResponse(post, authorMap.get(post.getAuthorId())))
                 .collect(Collectors.toList());
 
-        return new co.kr.mini_spring.global.common.response.PageResponse<>(
+        PageResponse<PostSummaryResponse> response = new PageResponse<>(
                 responseContent,
                 postPage.getNumber(),
                 postPage.getSize(),
@@ -167,6 +194,8 @@ public class PostService {
                 postPage.getTotalPages(),
                 postPage.hasNext()
         );
+        postCacheService.putList(listKey, response);
+        return response;
     }
 
     /**
