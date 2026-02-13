@@ -15,6 +15,7 @@ build/
 # IDE (IntelliJ, VS Code 등)
 .idea/
 .worktrees/
+.worktrees/
 *.iws
 *.iml
 *.ipr
