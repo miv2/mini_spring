@@ -4,6 +4,7 @@ import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
+import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.cache.PostCacheKey;
 import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Post;
@@ -34,6 +35,7 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostQueryRepository postQueryRepository;
     private final PostLikeRepository postLikeRepository;
+    private final SocialMemberRepository socialMemberRepository;
     private final HashtagService hashtagService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final PostCacheService postCacheService;
@@ -49,6 +51,8 @@ public class PostService {
     @Transactional
     public PostResponse createPost(PostCreateRequest request, SocialMember member) {
         requireAuthenticated(member);
+        SocialMember author = socialMemberRepository.findByEmailWithProfileImage(member.getEmail())
+                .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
         Post post = Post.builder()
                 .title(request.getTitle())
                 .content(request.getContent())
@@ -57,7 +61,7 @@ public class PostService {
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
         postCacheService.evictLists();
-        return new PostResponse(post, member, member, 0, false, defaultProfileImage);
+        return new PostResponse(post, author, author, 0, false, defaultProfileImage);
     }
 
     /**

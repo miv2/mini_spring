@@ -39,6 +39,7 @@ class PostServiceCacheTest {
         PostRepository postRepository = mock(PostRepository.class);
         PostQueryRepository postQueryRepository = mock(PostQueryRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
+        co.kr.mini_spring.member.domain.repository.SocialMemberRepository socialMemberRepository = mock(co.kr.mini_spring.member.domain.repository.SocialMemberRepository.class);
         HashtagService hashtagService = mock(HashtagService.class);
         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         PostCacheService cacheService = mock(PostCacheService.class);
@@ -47,6 +48,7 @@ class PostServiceCacheTest {
                 postRepository,
                 postQueryRepository,
                 postLikeRepository,
+                socialMemberRepository,
                 hashtagService,
                 redisTemplate,
                 cacheService
