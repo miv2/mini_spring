@@ -1,5 +1,8 @@
 package co.kr.mini_spring.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
@@ -18,7 +21,10 @@ public class RedisConfig {
         // Key는 문자열로 저장
         template.setKeySerializer(new StringRedisSerializer());
         // Value는 JSON 형태로 저장
-        template.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        template.setValueSerializer(new GenericJackson2JsonRedisSerializer(objectMapper));
         
         return template;
     }

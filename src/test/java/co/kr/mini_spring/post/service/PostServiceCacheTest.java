@@ -5,7 +5,6 @@ import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
 import co.kr.mini_spring.member.domain.MemberStatus;
 import co.kr.mini_spring.member.domain.SocialMember;
-import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.repository.PostLikeRepository;
@@ -40,7 +39,6 @@ class PostServiceCacheTest {
         PostRepository postRepository = mock(PostRepository.class);
         PostQueryRepository postQueryRepository = mock(PostQueryRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
-        SocialMemberRepository socialMemberRepository = mock(SocialMemberRepository.class);
         HashtagService hashtagService = mock(HashtagService.class);
         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         PostCacheService cacheService = mock(PostCacheService.class);
@@ -49,7 +47,6 @@ class PostServiceCacheTest {
                 postRepository,
                 postQueryRepository,
                 postLikeRepository,
-                socialMemberRepository,
                 hashtagService,
                 redisTemplate,
                 cacheService
@@ -77,7 +74,6 @@ class PostServiceCacheTest {
 
         when(postQueryRepository.findAllByPublishedPage(anyBoolean(), any(), any(), any(), any()))
                 .thenReturn(page);
-        when(socialMemberRepository.findAllById(Set.of(3L))).thenReturn(List.of(author));
 
         PageResponse<PostSummaryResponse> cachedResponse = new PageResponse<>(
                 List.of(new PostSummaryResponse(post, author)),

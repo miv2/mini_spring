@@ -4,7 +4,6 @@ import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
 import co.kr.mini_spring.member.domain.MemberStatus;
 import co.kr.mini_spring.member.domain.SocialMember;
-import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.PostLike;
@@ -25,7 +24,6 @@ class PostServiceCacheInvalidationTest {
         PostRepository postRepository = mock(PostRepository.class);
         PostQueryRepository postQueryRepository = mock(PostQueryRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
-        SocialMemberRepository socialMemberRepository = mock(SocialMemberRepository.class);
         HashtagService hashtagService = mock(HashtagService.class);
         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         PostCacheService cacheService = mock(PostCacheService.class);
@@ -34,7 +32,6 @@ class PostServiceCacheInvalidationTest {
                 postRepository,
                 postQueryRepository,
                 postLikeRepository,
-                socialMemberRepository,
                 hashtagService,
                 redisTemplate,
                 cacheService
@@ -64,7 +61,6 @@ class PostServiceCacheInvalidationTest {
         PostRepository postRepository = mock(PostRepository.class);
         PostQueryRepository postQueryRepository = mock(PostQueryRepository.class);
         PostLikeRepository postLikeRepository = mock(PostLikeRepository.class);
-        SocialMemberRepository socialMemberRepository = mock(SocialMemberRepository.class);
         HashtagService hashtagService = mock(HashtagService.class);
         RedisTemplate<String, Object> redisTemplate = mock(RedisTemplate.class);
         PostCacheService cacheService = mock(PostCacheService.class);
@@ -73,7 +69,6 @@ class PostServiceCacheInvalidationTest {
                 postRepository,
                 postQueryRepository,
                 postLikeRepository,
-                socialMemberRepository,
                 hashtagService,
                 redisTemplate,
                 cacheService
