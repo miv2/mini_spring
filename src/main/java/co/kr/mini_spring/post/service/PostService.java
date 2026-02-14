@@ -168,11 +168,13 @@ public class PostService {
         );
         Object cached = postCacheService.get(listKey).orElse(null);
         if (cached instanceof PageResponse<?> cachedResponse) {
+            log.info("[Cache Hit] 게시글 목록을 캐시에서 반환합니다. key={}", listKey);
             @SuppressWarnings("unchecked")
             PageResponse<PostSummaryResponse> response = (PageResponse<PostSummaryResponse>) cachedResponse;
             return response;
         }
 
+        log.info("[Cache Miss] 캐시가 없거나 만료되어 DB를 조회합니다. key={}", listKey);
         org.springframework.data.domain.Page<Post> postPage = postQueryRepository.findAllByPublishedPage(
                 true, keyword, hashtags, authorId, pageable);
 
