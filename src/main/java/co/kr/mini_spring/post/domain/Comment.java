@@ -41,6 +41,7 @@ public class Comment {
     @JoinColumn(name = "parent_comment_id")
     private Comment parent;
 
+    @org.hibernate.annotations.BatchSize(size = 100)
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Comment> children = new ArrayList<>();
@@ -60,7 +61,7 @@ public class Comment {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    // == 비즈니스 로직 ==//
+
     public void updateContent(String content) {
         this.content = content;
     }

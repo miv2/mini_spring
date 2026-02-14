@@ -3,7 +3,6 @@ package co.kr.mini_spring.member.domain.repository;
 import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.SocialMember;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -12,9 +11,6 @@ import java.util.Optional;
 public interface SocialMemberRepository extends JpaRepository<SocialMember, Long> {
 
     Optional<SocialMember> findByEmail(String email);
-
-    @Query("select m from SocialMember m left join fetch m.profileImage where m.email = :email")
-    Optional<SocialMember> findByEmailWithProfileImage(String email);
 
     Optional<SocialMember> findByNickname(String nickname);
 

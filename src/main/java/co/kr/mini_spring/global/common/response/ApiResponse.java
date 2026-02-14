@@ -2,6 +2,7 @@ package co.kr.mini_spring.global.common.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -11,12 +12,21 @@ import java.time.LocalDateTime;
 @Getter
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
+@Schema(description = "공통 응답 객체")
 public class ApiResponse<T> {
+    @Schema(description = "성공 여부")
     private final boolean success;
+
+    @Schema(description = "응답 코드 (SUCCESS, FAIL 등)")
     private final String code;
+
+    @Schema(description = "응답 메시지")
     private final String message;
+
+    @Schema(description = "데이터 결과")
     private final T data;
 
+    @Schema(description = "응답 시간")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private final LocalDateTime timestamp;
 

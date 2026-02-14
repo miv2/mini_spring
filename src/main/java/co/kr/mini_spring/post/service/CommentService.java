@@ -4,6 +4,7 @@ import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
+import co.kr.mini_spring.member.domain.repository.SocialMemberQueryRepository;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Comment;
@@ -16,6 +17,7 @@ import co.kr.mini_spring.post.dto.request.CommentCreateRequest;
 import co.kr.mini_spring.post.dto.request.CommentUpdateRequest;
 import co.kr.mini_spring.post.dto.response.CommentResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,7 +37,11 @@ public class CommentService {
     private final PostRepository postRepository;
     private final PostQueryRepository postQueryRepository;
     private final SocialMemberRepository socialMemberRepository;
+    private final SocialMemberQueryRepository socialMemberQueryRepository;
     private final PostCacheService postCacheService;
+
+    @Value("${file.default-profile-image:/uploads/default-profile.png}")
+    private String defaultProfileImage;
 
     /**
      * 특정 게시글의 최상위 댓글 목록을 오프셋 기반 페이징으로 조회합니다.
@@ -52,20 +58,29 @@ public class CommentService {
         Page<Comment> commentPage = commentQueryRepository.findAllTopLevelCommentsByPostIdPage(postId, pageable);
         List<Comment> content = commentPage.getContent();
 
+        // 모든 댓글(최상위 + 대댓글)의 작성자 ID를 한 번에 수집
         Set<Long> authorIds = content.stream()
-                .map(Comment::getAuthorId)
-                .filter(Objects::nonNull)
+                .flatMap(c -> {
+                    List<Long> ids = new ArrayList<>();
+                    if (c.getAuthorId() != null) ids.add(c.getAuthorId());
+                    c.getChildren().forEach(child -> {
+                        if (child.getAuthorId() != null) ids.add(child.getAuthorId());
+                    });
+                    return ids.stream();
+                })
                 .collect(Collectors.toSet());
 
-        content.forEach(c -> {
-            c.getChildren().forEach(child -> {
-                if (child.getAuthorId() != null)
-                    authorIds.add(child.getAuthorId());
-            });
-        });
-
-        Map<Long, SocialMember> authorMap = socialMemberRepository.findAllById(authorIds).stream()
-                .collect(Collectors.toMap(SocialMember::getId, Function.identity()));
+        Map<Long, SocialMember> authorMap;
+        if (authorIds.isEmpty()) {
+            authorMap = new HashMap<>();
+        } else {
+            authorMap = socialMemberQueryRepository.findAllByIdWithProfileImage(authorIds).stream()
+                    .collect(Collectors.toMap(
+                            SocialMember::getId,
+                            Function.identity(),
+                            (existing, replacement) -> existing
+                    ));
+        }
 
         List<CommentResponse> responseContent = content.stream()
                 .map(comment -> mapToCommentResponse(comment, currentUser, authorMap))
@@ -93,6 +108,9 @@ public class CommentService {
         Post post = postRepository.findById(request.getPostId())
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
 
+        SocialMember author = socialMemberQueryRepository.findByEmailWithProfileImage(member.getEmail())
+                .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
+
         Comment parentComment = null;
         if (request.getParentId() != null) {
             parentComment = commentRepository.findById(request.getParentId())
@@ -118,7 +136,7 @@ public class CommentService {
         postQueryRepository.incrementCommentCount(post.getId());
         postCacheService.evictLists();
 
-        return new CommentResponse(savedComment, member, member, List.of());
+        return new CommentResponse(savedComment, author, author, List.of(), defaultProfileImage);
     }
 
     /**
@@ -138,8 +156,11 @@ public class CommentService {
             throw new BusinessException(ResponseCode.NO_PERMISSION_TO_UPDATE_COMMENT);
         }
 
+        SocialMember author = socialMemberQueryRepository.findByEmailWithProfileImage(member.getEmail())
+                .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
+
         comment.updateContent(request.getContent());
-        return new CommentResponse(comment, member, member, List.of());
+        return new CommentResponse(comment, author, author, List.of(), defaultProfileImage);
     }
 
     /**
@@ -182,6 +203,7 @@ public class CommentService {
                 .sorted(Comparator.comparing(Comment::getCreatedAt))
                 .map(child -> mapToCommentResponse(child, currentUser, authorMap))
                 .collect(Collectors.toList());
-        return new CommentResponse(comment, author, currentUser, children);
+        return new CommentResponse(comment, author, currentUser, children, defaultProfileImage);
     }
 }
+

@@ -33,6 +33,8 @@ public class PostQueryRepository {
     private static final QPost post = QPost.post;
     private static final QPostHashtag postHashtag = QPostHashtag.postHashtag;
     private static final QHashtag hashtag = QHashtag.hashtag;
+    private static final co.kr.mini_spring.member.domain.QSocialMember socialMember = co.kr.mini_spring.member.domain.QSocialMember.socialMember;
+    private static final co.kr.mini_spring.global.common.file.domain.QStoredFile storedFile = co.kr.mini_spring.global.common.file.domain.QStoredFile.storedFile;
 
     /**
      * 게시글을 비관적 락(PESSIMISTIC_WRITE)을 걸어 조회합니다.
@@ -47,13 +49,14 @@ public class PostQueryRepository {
     }
 
     /**
-     * 게시글의 모든 연관관계(작성자, 해시태그)를 Fetch Join하여 한 번에 조회합니다.
+     * 게시글의 모든 연관관계(작성자, 프로필 이미지, 해시태그)를 Fetch Join하여 한 번에 조회합니다.
      * - N+1 문제를 방지하기 위해 상세 페이지 조회 시 사용합니다.
      */
     public Optional<Post> findByIdWithAllRelations(Long id) {
         return Optional.ofNullable(
                 queryFactory.selectFrom(post)
-                        .leftJoin(post.author).fetchJoin()
+                        .leftJoin(post.author, socialMember).fetchJoin()
+                        .leftJoin(socialMember.profileImage, storedFile).fetchJoin()
                         .leftJoin(post.postHashtags, postHashtag).fetchJoin()
                         .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                         .where(post.id.eq(id))
@@ -99,7 +102,8 @@ public class PostQueryRepository {
 
         // 3. 실데이터 Fetch Join 조회
         List<Post> content = queryFactory.selectFrom(post)
-                .leftJoin(post.author).fetchJoin()
+                .leftJoin(post.author, socialMember).fetchJoin()
+                .leftJoin(socialMember.profileImage, storedFile).fetchJoin()
                 .leftJoin(post.postHashtags, postHashtag).fetchJoin()
                 .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                 .where(post.id.in(ids))

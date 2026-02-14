@@ -26,4 +26,27 @@ public class SocialMemberQueryRepository {
                 .fetchOne();
         return Optional.ofNullable(result);
     }
+
+    /**
+     * 이메일로 회원 조회 (프로필 이미지 포함)
+     */
+    public Optional<SocialMember> findByEmailWithProfileImage(String email) {
+        SocialMember result = queryFactory
+                .selectFrom(socialMember)
+                .leftJoin(socialMember.profileImage).fetchJoin()
+                .where(socialMember.email.eq(email))
+                .fetchOne();
+        return Optional.ofNullable(result);
+    }
+
+    /**
+     * 여러 ID에 해당하는 회원 목록 조회 (프로필 이미지 포함)
+     */
+    public java.util.List<SocialMember> findAllByIdWithProfileImage(java.util.Collection<Long> memberIds) {
+        return queryFactory
+                .selectFrom(socialMember)
+                .leftJoin(socialMember.profileImage).fetchJoin()
+                .where(socialMember.id.in(memberIds))
+                .fetch();
+    }
 }

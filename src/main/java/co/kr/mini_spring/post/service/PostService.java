@@ -4,6 +4,7 @@ import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
+import co.kr.mini_spring.member.domain.repository.SocialMemberQueryRepository;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.cache.PostCacheKey;
 import co.kr.mini_spring.post.cache.PostCacheService;
@@ -36,6 +37,7 @@ public class PostService {
     private final PostQueryRepository postQueryRepository;
     private final PostLikeRepository postLikeRepository;
     private final SocialMemberRepository socialMemberRepository;
+    private final SocialMemberQueryRepository socialMemberQueryRepository;
     private final HashtagService hashtagService;
     private final RedisTemplate<String, Object> redisTemplate;
     private final PostCacheService postCacheService;
@@ -51,7 +53,7 @@ public class PostService {
     @Transactional
     public PostResponse createPost(PostCreateRequest request, SocialMember member) {
         requireAuthenticated(member);
-        SocialMember author = socialMemberRepository.findByEmailWithProfileImage(member.getEmail())
+        SocialMember author = socialMemberQueryRepository.findByEmailWithProfileImage(member.getEmail())
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
         Post post = Post.builder()
                 .title(request.getTitle())
@@ -80,7 +82,7 @@ public class PostService {
         }
         SocialMember author = post.getAuthor();
         boolean isLiked = currentUser != null
-                && postLikeRepository.findLike(currentUser.getId(), postId).isPresent();
+                && postLikeRepository.findById(new PostLike.PostLikeId(currentUser.getId(), postId)).isPresent();
         return new PostResponse(post, author, currentUser, viewCountOverride, isLiked, defaultProfileImage);
     }
 
@@ -96,7 +98,7 @@ public class PostService {
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
         postCacheService.evictLists();
-        return new PostResponse(post, member, member, null, false, defaultProfileImage);
+        return new PostResponse(post, post.getAuthor(), member, null, false, defaultProfileImage);
     }
 
     /**
@@ -119,7 +121,7 @@ public class PostService {
     public void addLike(Long postId, Long memberId) {
         if (memberId == null)
             throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        if (postLikeRepository.findLike(memberId, postId).isPresent())
+        if (postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)).isPresent())
             return;
 
         Post post = postQueryRepository.findByIdWithPessimisticLock(postId)
@@ -140,7 +142,7 @@ public class PostService {
     public void removeLike(Long postId, Long memberId) {
         if (memberId == null)
             throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        PostLike postLike = postLikeRepository.findLike(memberId, postId).orElse(null);
+        PostLike postLike = postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)).orElse(null);
         if (postLike == null)
             return;
 

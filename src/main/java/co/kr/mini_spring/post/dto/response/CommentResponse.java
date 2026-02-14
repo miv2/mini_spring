@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 
 @Getter
 @JsonPropertyOrder({
-        "id", "content", "memberId", "memberName", "isOwner", "parentId",
+        "id", "content", "memberId", "memberName", "profileImageUrl", "isOwner", "parentId",
         "isDeleted", "createdAt", "updatedAt", "children"
 })
 @Schema(description = "댓글 정보 응답")
@@ -32,6 +32,9 @@ public class CommentResponse {
 
     @Schema(description = "작성자 닉네임")
     private final String memberName;
+
+    @Schema(description = "작성자 프로필 이미지 URL")
+    private final String profileImageUrl;
 
     @Schema(description = "본인 댓글 여부 (수정/삭제 권한 확인용)")
     private final boolean isOwner;
@@ -57,13 +60,15 @@ public class CommentResponse {
      * 댓글 응답 생성자
      * 
      * @param comment     댓글 엔티티
+     * @param author      작성자 엔티티
      * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
      */
-    public CommentResponse(Comment comment, SocialMember author, SocialMember currentUser) {
+    public CommentResponse(Comment comment, SocialMember author, SocialMember currentUser, String defaultProfileImage) {
         this.id = comment.getId();
         this.content = comment.isDeleted() ? "삭제된 댓글입니다." : comment.getContent();
         this.memberId = comment.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
         this.parentId = (comment.getParent() != null) ? comment.getParent().getId() : null;
         this.isDeleted = comment.isDeleted();
         this.createdAt = comment.getCreatedAt();
@@ -73,14 +78,13 @@ public class CommentResponse {
         this.children = List.of();
     }
 
-    // Children을 외부에서 주입받기 위한 생성자 혹은 Setter 필요.
-    // 혹은 Service에서 트리를 조립하도록 변경 권장.
     public CommentResponse(Comment comment, SocialMember author, SocialMember currentUser,
-            List<CommentResponse> children) {
+            List<CommentResponse> children, String defaultProfileImage) {
         this.id = comment.getId();
         this.content = comment.isDeleted() ? "삭제된 댓글입니다." : comment.getContent();
         this.memberId = comment.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
         this.parentId = (comment.getParent() != null) ? comment.getParent().getId() : null;
         this.isDeleted = comment.isDeleted();
         this.createdAt = comment.getCreatedAt();

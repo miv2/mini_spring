@@ -1,9 +1,13 @@
 package co.kr.mini_spring.member.dto.response;
 
-import co.kr.mini_spring.member.domain.SocialMember;
+import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
+import co.kr.mini_spring.member.domain.SocialMember;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
+
+import java.time.LocalDateTime;
 
 @Getter
 @Schema(description = "회원 정보 응답")
@@ -27,6 +31,13 @@ public class MemberResponse {
     @Schema(description = "권한")
     private final MemberRole role;
 
+    @Schema(description = "가입일")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private final LocalDateTime createdAt;
+
+    @Schema(description = "소셜 로그인 제공자")
+    private final MemberProvider provider;
+
     public MemberResponse(SocialMember member, String defaultProfileImage) {
         this.id = member.getId();
         this.email = member.getEmail();
@@ -34,5 +45,7 @@ public class MemberResponse {
         this.nickname = member.getNickname();
         this.profileImageUrl = member.getProfileImageUrl(defaultProfileImage);
         this.role = member.getRole();
+        this.createdAt = member.getCreatedAt();
+        this.provider = member.getProvider();
     }
 }
