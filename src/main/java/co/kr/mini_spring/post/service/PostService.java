@@ -18,6 +18,7 @@ import co.kr.mini_spring.post.dto.request.PostUpdateRequest;
 import co.kr.mini_spring.post.dto.response.PostResponse;
 import co.kr.mini_spring.post.dto.response.PostSummaryResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -29,6 +30,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
