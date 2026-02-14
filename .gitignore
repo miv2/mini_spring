@@ -37,6 +37,7 @@ uploads/
 
 # Documentation & Tracking
 GEMINI.md
+docs/
 
 # Local settings
 src/main/resources/application-local.yml
