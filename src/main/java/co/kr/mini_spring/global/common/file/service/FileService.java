@@ -53,13 +53,13 @@ public class FileService {
         String publicPath = buildPublicPath(datePath);
 
         // 3. 물리적 디렉토리 생성
-        Path targetDir = Paths.get(uploadDir, datePath);
+        Path targetDir = Paths.get(uploadDir, datePath).toAbsolutePath().normalize();
         createDirectory(targetDir);
 
         // 4. 파일 물리 저장
         Path targetPath = targetDir.resolve(storedName);
         try {
-            file.transferTo(targetPath.toFile());
+            file.transferTo(targetPath);
             log.info("[파일 저장 성공] path={}", targetPath);
         } catch (IOException e) {
             log.error("[파일 저장 실패] error={}", e.getMessage());
@@ -101,6 +101,32 @@ public class FileService {
         return files.stream()
                 .map(this::uploadImage)
                 .toList();
+    }
+
+    /**
+     * 물리적 파일과 DB 메타데이터를 삭제합니다.
+     */
+    @Transactional
+    public void deleteFile(StoredFile storedFile) {
+        if (storedFile == null) return;
+
+        // 1. 물리적 파일 삭제 시도
+        try {
+            // public URL 경로에서 날짜 경로(yyyy/MM/dd) 추출 시도
+            String fullPath = storedFile.getFilePath(); // /uploads/2026/02/14/ 형태
+            String relativePath = fullPath.replace(publicBaseUrl, ""); // 2026/02/14/
+            
+            Path targetPath = Paths.get(uploadDir, relativePath, storedFile.getStoredName());
+            Files.deleteIfExists(targetPath);
+            log.info("[파일 물리 삭제 성공] path={}", targetPath);
+        } catch (IOException e) {
+            log.warn("[파일 물리 삭제 실패] error={}", e.getMessage());
+            // 물리 파일 삭제 실패 시에도 DB 데이터는 삭제 시도 (필요에 따라 정책 조정 가능)
+        }
+
+        // 2. DB 메타데이터 삭제
+        imageFileRepository.delete(storedFile);
+        log.info("[파일 DB 레코드 삭제 성공] fileId={}", storedFile.getId());
     }
 
     /**

@@ -51,10 +51,16 @@ public class MemberService {
         SocialMember member = socialMemberQueryRepository.findByIdWithProfileImage(memberId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
 
-        // 1. 새 이미지 파일 저장
+        // 1. 기존 이미지가 있다면 물리적 파일 및 DB 레코드 삭제
+        StoredFile oldImage = member.getProfileImage();
+        if (oldImage != null) {
+            fileService.deleteFile(oldImage);
+        }
+
+        // 2. 새 이미지 파일 저장
         StoredFile imageFile = fileService.uploadImage(file);
 
-        // 2. 멤버 엔티티의 프로필 이미지 업데이트
+        // 3. 멤버 엔티티의 프로필 이미지 업데이트
         member.updateProfileImage(imageFile);
 
         log.info("[프로필 이미지 업데이트 성공] memberId={}, fileId={}", memberId, imageFile.getId());

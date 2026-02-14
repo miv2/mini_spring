@@ -5,25 +5,12 @@ spring:
   application:
     name: mini_spring
   profiles:
-    active: local # 기본 실행 환경 (로컬)
+    active: local # 기본값은 로컬
 
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
-
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      password: ${REDIS_PASSWORD:}
-
-  jpa:
-    properties:
-      hibernate:
-        jdbc:
-          time_zone: Asia/Seoul
-    open-in-view: false
 
 management:
   endpoints:
@@ -33,7 +20,6 @@ management:
   endpoint:
     health:
       show-details: always
-
 
 jwt:
   access-token-expiration: 3600000  # 1시간

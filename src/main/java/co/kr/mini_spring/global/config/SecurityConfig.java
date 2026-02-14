@@ -73,10 +73,7 @@ public class SecurityConfig {
                     "/api/auth/signup", "/api/auth/login", "/api/auth/refresh"
                 ).permitAll()
                 
-                // 4. 공개 조회 API (게시글, 댓글 등 - 필요 시 추가 가능)
-                .requestMatchers("/api/posts/**", "/api/comments/**").permitAll()
-                
-                // 5. 관리자 전용
+                // 4. 관리자 전용
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 
                 // 그 외 모든 요청은 인증 필요
