@@ -69,9 +69,6 @@ logging:
 jwt:
   secret: ${JWT_SECRET}
 
-app:
-  base-url: ${APP_BASE_URL}
-
 management:
   health:
     redis:

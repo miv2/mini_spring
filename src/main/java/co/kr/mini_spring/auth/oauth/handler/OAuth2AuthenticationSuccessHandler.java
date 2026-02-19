@@ -15,7 +15,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -37,11 +36,8 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final RefreshTokenRepository refreshTokenRepository;
     private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
 
-    @Value("${app.base-url:http://localhost:5173}")
-    private String appBaseUrl;
-
     @Override
-    @Transactional
+    @Transactional // Refresh Token 저장 로직을 포함하므로 트랜잭션 처리
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
         String targetUrl = determineTargetUrl(request, response, authentication);
@@ -92,7 +88,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         
         CookieUtil.setAuthCookies(request, response, tokenResponse);
 
-        return appBaseUrl + "/home";
+        return "http://localhost:5173/home";
     }
 
     private String resolveEmail(String registrationId, Map<String, Object> attributes) {
