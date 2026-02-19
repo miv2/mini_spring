@@ -1,9 +1,11 @@
 package co.kr.mini_spring.auth.oauth.handler;
 
+import co.kr.mini_spring.auth.dto.response.TokenResponse;
 import co.kr.mini_spring.auth.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
 import co.kr.mini_spring.auth.token.domain.RefreshToken;
 import co.kr.mini_spring.auth.token.repository.RefreshTokenRepository;
 import co.kr.mini_spring.global.security.JwtTokenProvider;
+import co.kr.mini_spring.global.util.CookieUtil;
 import co.kr.mini_spring.member.domain.MemberProvider;
 import co.kr.mini_spring.member.domain.MemberRole;
 import co.kr.mini_spring.member.domain.SocialMember;
@@ -13,7 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.ResponseCookie;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -21,17 +23,10 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
-import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.Map;
 
-import co.kr.mini_spring.global.util.CookieUtil;
-import co.kr.mini_spring.auth.dto.response.TokenResponse;
-...
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -78,7 +73,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         JwtTokenProvider.TokenWithExpiry accessTokenInfo = jwtTokenProvider.generateAccessToken(email, role);
         JwtTokenProvider.TokenWithExpiry refreshTokenInfo = jwtTokenProvider.generateRefreshToken(email);
 
-        // 1. 사용자 조회 및 Refresh Token 갱신 (생략 - 기존과 동일)
         SocialMember member = socialMemberRepository.findByProviderAndOauthId(provider, oauthId)
                 .orElseGet(() -> socialMemberRepository.findByEmail(email)
                         .orElseThrow(() -> new IllegalStateException("사용자를 찾을 수 없습니다.")));
@@ -89,7 +83,6 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .expiresAt(refreshTokenInfo.getExpiresAt())
                 .build());
 
-        // 2. CookieUtil을 사용하여 일관된 쿠키 생성
         TokenResponse tokenResponse = TokenResponse.builder()
                 .accessToken(accessTokenInfo.getToken())
                 .refreshToken(refreshTokenInfo.getToken())
@@ -99,37 +92,30 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         
         CookieUtil.setAuthCookies(request, response, tokenResponse);
 
-        // 3. 동적 리다이렉트 경로 설정
         return appBaseUrl + "/home";
     }
 
     private String resolveEmail(String registrationId, Map<String, Object> attributes) {
         Object email = attributes.get("email");
-        if (email != null) {
-            return email.toString();
-        }
+        if (email != null) return email.toString();
+        
         if ("kakao".equalsIgnoreCase(registrationId)) {
             Object account = attributes.get("kakao_account");
             if (account instanceof Map<?, ?> map && map.get("email") != null) {
                 return map.get("email").toString();
             }
         }
-        throw new IllegalStateException("OAuth2 인증 후 이메일을 확인할 수 없습니다.");
+        throw new IllegalStateException("이메일을 확인할 수 없습니다.");
     }
 
     private String resolveOauthId(String registrationId, String defaultName, Map<String, Object> attributes) {
         if ("kakao".equalsIgnoreCase(registrationId)) {
             Object id = attributes.get("id");
-            if (id != null)
-                return id.toString();
+            if (id != null) return id.toString();
         }
         if ("google".equalsIgnoreCase(registrationId)) {
             Object sub = attributes.get("sub");
-            if (sub != null)
-                return sub.toString();
-            Object id = attributes.get("id");
-            if (id != null)
-                return id.toString();
+            if (sub != null) return sub.toString();
         }
         return defaultName;
     }
