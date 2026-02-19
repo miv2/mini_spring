@@ -1,9 +1,6 @@
 package co.kr.mini_spring.post.domain.repository;
 
 import co.kr.mini_spring.post.domain.Post;
-import co.kr.mini_spring.post.domain.QHashtag;
-import co.kr.mini_spring.post.domain.QPost;
-import co.kr.mini_spring.post.domain.QPostHashtag;
 import com.querydsl.core.types.Order;
 import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
@@ -21,6 +18,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import static co.kr.mini_spring.post.domain.QPost.post;
+import static co.kr.mini_spring.post.domain.QPostHashtag.postHashtag;
+import static co.kr.mini_spring.post.domain.QHashtag.hashtag;
+import static co.kr.mini_spring.member.domain.QSocialMember.socialMember;
+import static co.kr.mini_spring.global.common.file.domain.QStoredFile.storedFile;
+
 /**
  * Post 도메인 전용 Querydsl 리포지토리
  * - 복잡한 동적 쿼리, Fetch Join을 통한 성능 최적화, 벌크 업데이트를 담당합니다.
@@ -30,11 +33,6 @@ import java.util.Set;
 public class PostQueryRepository {
 
     private final JPAQueryFactory queryFactory;
-    private static final QPost post = QPost.post;
-    private static final QPostHashtag postHashtag = QPostHashtag.postHashtag;
-    private static final QHashtag hashtag = QHashtag.hashtag;
-    private static final co.kr.mini_spring.member.domain.QSocialMember socialMember = co.kr.mini_spring.member.domain.QSocialMember.socialMember;
-    private static final co.kr.mini_spring.global.common.file.domain.QStoredFile storedFile = co.kr.mini_spring.global.common.file.domain.QStoredFile.storedFile;
 
     /**
      * 게시글을 비관적 락(PESSIMISTIC_WRITE)을 걸어 조회합니다.

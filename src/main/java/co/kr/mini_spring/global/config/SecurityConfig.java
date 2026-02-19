@@ -69,8 +69,9 @@ public class SecurityConfig {
                 
                 // 3. 인증 관련 API
                 .requestMatchers(
-                    "/login/**", "/oauth2/**", "/oauth/callback",
-                    "/api/auth/signup", "/api/auth/login", "/api/auth/refresh"
+                    "/oauth2/**", "/oauth/callback",
+                    "/api/auth/signup", "/api/auth/login", "/api/auth/refresh",
+                    "/api/test/**"
                 ).permitAll()
                 
                 // 4. 관리자 전용

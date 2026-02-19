@@ -1,12 +1,13 @@
 package co.kr.mini_spring.post.domain.repository;
 
-import co.kr.mini_spring.post.domain.QHashtag;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+
+import static co.kr.mini_spring.post.domain.QHashtag.hashtag;
 
 /**
  * Hashtag 도메인 전용 Querydsl 리포지토리
@@ -17,7 +18,6 @@ import java.util.List;
 public class HashtagQueryRepository {
 
     private final JPAQueryFactory queryFactory;
-    private static final QHashtag hashtag = QHashtag.hashtag;
 
     /**
      * 여러 해시태그의 사용 횟수를 한 번의 쿼리로 일괄 증가시킵니다.

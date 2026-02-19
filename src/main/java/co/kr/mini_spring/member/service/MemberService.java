@@ -47,7 +47,7 @@ public class MemberService {
      */
     @Transactional
     public String updateProfileImage(Long memberId, MultipartFile file) {
-        // 최적화된 Querydsl 조회 사용
+
         SocialMember member = socialMemberQueryRepository.findByIdWithProfileImage(memberId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
 

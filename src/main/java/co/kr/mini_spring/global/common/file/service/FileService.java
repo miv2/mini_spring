@@ -177,9 +177,12 @@ public class FileService {
      */
     private String buildPublicPath(String datePath) {
         String base = publicBaseUrl == null ? "/uploads/" : publicBaseUrl.trim();
-        if (!base.startsWith("/")) {
+        
+        // http로 시작하지 않을 때만 맨 앞에 /가 없으면 붙여줌
+        if (!base.startsWith("http") && !base.startsWith("/")) {
             base = "/" + base;
         }
+        
         if (!base.endsWith("/")) {
             base = base + "/";
         }

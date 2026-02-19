@@ -6,7 +6,6 @@ import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberQueryRepository;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
-import co.kr.mini_spring.post.cache.PostCacheService;
 import co.kr.mini_spring.post.domain.Comment;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.repository.CommentQueryRepository;
@@ -17,7 +16,7 @@ import co.kr.mini_spring.post.dto.request.CommentCreateRequest;
 import co.kr.mini_spring.post.dto.request.CommentUpdateRequest;
 import co.kr.mini_spring.post.dto.response.CommentResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -38,18 +37,12 @@ public class CommentService {
     private final PostQueryRepository postQueryRepository;
     private final SocialMemberRepository socialMemberRepository;
     private final SocialMemberQueryRepository socialMemberQueryRepository;
-    private final PostCacheService postCacheService;
 
-    @Value("${file.default-profile-image:/uploads/default-profile.png}")
+    @org.springframework.beans.factory.annotation.Value("${file.default-profile-image:/uploads/default-profile.png}")
     private String defaultProfileImage;
 
     /**
      * 특정 게시글의 최상위 댓글 목록을 오프셋 기반 페이징으로 조회합니다.
-     *
-     * @param postId      게시글 ID
-     * @param pageable    페이지 정보
-     * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
-     * @return 댓글 목록을 포함한 응답 DTO
      */
     public PageResponse<CommentResponse> getComments(Long postId, Pageable pageable, SocialMember currentUser) {
         postRepository.findById(postId)
@@ -58,7 +51,7 @@ public class CommentService {
         Page<Comment> commentPage = commentQueryRepository.findAllTopLevelCommentsByPostIdPage(postId, pageable);
         List<Comment> content = commentPage.getContent();
 
-        // 모든 댓글(최상위 + 대댓글)의 작성자 ID를 한 번에 수집
+        // 모든 댓글(최상위 + 대댓글)의 작성자 ID를 한 번에 수집 (N+1 방지)
         Set<Long> authorIds = content.stream()
                 .flatMap(c -> {
                     List<Long> ids = new ArrayList<>();
@@ -98,12 +91,10 @@ public class CommentService {
 
     /**
      * 댓글 또는 대댓글을 생성합니다.
-     *
-     * @param request 게시글 ID, 내용, 부모 댓글 ID(대댓글인 경우)를 포함한 요청 DTO
-     * @param member  인증된 작성자 정보
-     * @return 생성된 댓글 상세 정보
+     * - @CacheEvict: 댓글이 생성되면 글 목록의 댓글 수 정보 갱신을 위해 'posts' 캐시를 삭제합니다.
      */
     @Transactional
+    @CacheEvict(value = "posts", allEntries = true)
     public CommentResponse createComment(CommentCreateRequest request, SocialMember member) {
         Post post = postRepository.findById(request.getPostId())
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
@@ -134,18 +125,12 @@ public class CommentService {
 
         Comment savedComment = commentRepository.save(comment);
         postQueryRepository.incrementCommentCount(post.getId());
-        postCacheService.evictLists();
 
         return new CommentResponse(savedComment, author, author, List.of(), defaultProfileImage);
     }
 
     /**
      * 댓글 내용을 수정합니다. 작성자 본인만 수정할 수 있습니다.
-     *
-     * @param commentId 수정할 댓글 ID
-     * @param request   수정할 내용이 포함된 DTO
-     * @param member    인증된 수정 시도자 정보
-     * @return 수정된 댓글 상세 정보
      */
     @Transactional
     public CommentResponse updateComment(Long commentId, CommentUpdateRequest request, SocialMember member) {
@@ -165,11 +150,10 @@ public class CommentService {
 
     /**
      * 댓글을 삭제합니다.
-     *
-     * @param commentId 삭제할 댓글 ID
-     * @param member    인증된 삭제 시도자 정보
+     * - @CacheEvict: 댓글이 삭제되면 글 목록의 댓글 수 정보 갱신을 위해 'posts' 캐시를 삭제합니다.
      */
     @Transactional
+    @CacheEvict(value = "posts", allEntries = true)
     public void deleteComment(Long commentId, SocialMember member) {
         Comment comment = commentQueryRepository.findByIdWithMember(commentId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.COMMENT_NOT_FOUND));
@@ -193,7 +177,6 @@ public class CommentService {
                 postQueryRepository.decrementCommentCount(postId);
             }
         }
-        postCacheService.evictLists();
     }
 
     private CommentResponse mapToCommentResponse(Comment comment, SocialMember currentUser,
@@ -206,4 +189,3 @@ public class CommentService {
         return new CommentResponse(comment, author, currentUser, children, defaultProfileImage);
     }
 }
-

@@ -69,14 +69,18 @@ public class HttpCookieOAuth2AuthorizationRequestRepository implements Authoriza
         }
 
         // 2. authorizationRequest 객체를 직렬화하여 쿠키에 저장하고, 응답에 추가합니다.
-        CookieUtil.addCookie(response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, CookieUtil.serialize(authorizationRequest), COOKIE_EXPIRE_SECONDS);
+        CookieUtil.addCookie(response, OAUTH2_AUTHORIZATION_REQUEST_COOKIE_NAME, CookieUtil.serialize(authorizationRequest), COOKIE_EXPIRE_SECONDS, isSecureRequest(request));
 
         // 3. 소셜 로그인 후 리다이렉트할 URI가 파라미터로 넘어왔는지 확인합니다.
         String redirectUriAfterLogin = request.getParameter(REDIRECT_URI_PARAM_COOKIE_NAME);
         // 4. 리다이렉트 URI가 존재하면, 이 정보도 쿠키에 저장합니다.
         if (StringUtils.hasText(redirectUriAfterLogin)) {
-            CookieUtil.addCookie(response, REDIRECT_URI_PARAM_COOKIE_NAME, redirectUriAfterLogin, COOKIE_EXPIRE_SECONDS);
+            CookieUtil.addCookie(response, REDIRECT_URI_PARAM_COOKIE_NAME, redirectUriAfterLogin, COOKIE_EXPIRE_SECONDS, isSecureRequest(request));
         }
+    }
+
+    private boolean isSecureRequest(HttpServletRequest request) {
+        return request.isSecure() || "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
     }
 
     /**
