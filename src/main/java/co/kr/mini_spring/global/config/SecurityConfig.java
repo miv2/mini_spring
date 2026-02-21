@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -73,8 +74,12 @@ public class SecurityConfig {
                     "/api/auth/signup", "/api/auth/login", "/api/auth/refresh",
                     "/api/test/**"
                 ).permitAll()
+
+                // 4. 게시글 및 댓글 조회 (익명 허용)
+                .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
                 
-                // 4. 관리자 전용
+                // 5. 관리자 전용
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 
                 // 그 외 모든 요청은 인증 필요

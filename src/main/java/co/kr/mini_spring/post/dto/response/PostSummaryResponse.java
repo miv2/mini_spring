@@ -2,7 +2,9 @@ package co.kr.mini_spring.post.dto.response;
 
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.post.domain.Post;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
@@ -49,12 +51,36 @@ public class PostSummaryResponse {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm")
     private final LocalDateTime createdAt;
 
-    public PostSummaryResponse(Post post, SocialMember author, String defaultProfileImage) {
+    @JsonCreator
+    public PostSummaryResponse(
+            @JsonProperty("id") Long id,
+            @JsonProperty("title") String title,
+            @JsonProperty("memberId") Long memberId,
+            @JsonProperty("memberName") String memberName,
+            @JsonProperty("profileImageUrl") String profileImageUrl,
+            @JsonProperty("likeCount") int likeCount,
+            @JsonProperty("viewCount") int viewCount,
+            @JsonProperty("commentCount") int commentCount,
+            @JsonProperty("hashtags") Set<String> hashtags,
+            @JsonProperty("createdAt") LocalDateTime createdAt) {
+        this.id = id;
+        this.title = title;
+        this.memberId = memberId;
+        this.memberName = memberName;
+        this.profileImageUrl = profileImageUrl;
+        this.likeCount = likeCount;
+        this.viewCount = viewCount;
+        this.commentCount = commentCount;
+        this.hashtags = hashtags;
+        this.createdAt = createdAt;
+    }
+
+    public PostSummaryResponse(Post post, SocialMember author, String baseUrl, String defaultProfileImage) {
         this.id = post.getId();
         this.title = post.getTitle();
         this.memberId = post.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
-        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(baseUrl, defaultProfileImage) : defaultProfileImage;
         this.likeCount = post.getLikeCount();
         this.viewCount = post.getViewCount();
         this.commentCount = post.getCommentCount();

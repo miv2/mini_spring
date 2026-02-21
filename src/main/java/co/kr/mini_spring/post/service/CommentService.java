@@ -16,6 +16,7 @@ import co.kr.mini_spring.post.dto.request.CommentCreateRequest;
 import co.kr.mini_spring.post.dto.request.CommentUpdateRequest;
 import co.kr.mini_spring.post.dto.response.CommentResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -38,7 +39,10 @@ public class CommentService {
     private final SocialMemberRepository socialMemberRepository;
     private final SocialMemberQueryRepository socialMemberQueryRepository;
 
-    @org.springframework.beans.factory.annotation.Value("${file.default-profile-image:/uploads/default-profile.png}")
+    @Value("${file.public-base-url}")
+    private String publicBaseUrl;
+
+    @Value("${file.default-profile-image:/uploads/default-profile.png}")
     private String defaultProfileImage;
 
     /**
@@ -126,7 +130,7 @@ public class CommentService {
         Comment savedComment = commentRepository.save(comment);
         postQueryRepository.incrementCommentCount(post.getId());
 
-        return new CommentResponse(savedComment, author, author, List.of(), defaultProfileImage);
+        return new CommentResponse(savedComment, author, author, publicBaseUrl, defaultProfileImage);
     }
 
     /**
@@ -145,7 +149,7 @@ public class CommentService {
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
 
         comment.updateContent(request.getContent());
-        return new CommentResponse(comment, author, author, List.of(), defaultProfileImage);
+        return new CommentResponse(comment, author, author, publicBaseUrl, defaultProfileImage);
     }
 
     /**
@@ -186,6 +190,6 @@ public class CommentService {
                 .sorted(Comparator.comparing(Comment::getCreatedAt))
                 .map(child -> mapToCommentResponse(child, currentUser, authorMap))
                 .collect(Collectors.toList());
-        return new CommentResponse(comment, author, currentUser, children, defaultProfileImage);
+        return new CommentResponse(comment, author, currentUser, children, publicBaseUrl, defaultProfileImage);
     }
 }

@@ -38,12 +38,12 @@ public class MemberResponse {
     @Schema(description = "소셜 로그인 제공자")
     private final MemberProvider provider;
 
-    public MemberResponse(SocialMember member, String defaultProfileImage) {
+    public MemberResponse(SocialMember member, String baseUrl, String defaultProfileImage) {
         this.id = member.getId();
         this.email = member.getEmail();
         this.name = member.getName();
         this.nickname = member.getNickname();
-        this.profileImageUrl = member.getProfileImageUrl(defaultProfileImage);
+        this.profileImageUrl = member.getProfileImageUrl(baseUrl, defaultProfileImage);
         this.role = member.getRole();
         this.createdAt = member.getCreatedAt();
         this.provider = member.getProvider();

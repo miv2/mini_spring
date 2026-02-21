@@ -42,6 +42,9 @@ public class PostService {
     private final HashtagService hashtagService;
     private final RedisTemplate<String, Object> redisTemplate;
 
+    @Value("${file.public-base-url}")
+    private String publicBaseUrl;
+
     @Value("${file.default-profile-image:/uploads/default-profile.png}")
     private String defaultProfileImage;
 
@@ -64,7 +67,7 @@ public class PostService {
                 .build();
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
-        return new PostResponse(post, author, author, 0, false, defaultProfileImage);
+        return new PostResponse(post, author, author, 0, false, publicBaseUrl, defaultProfileImage);
     }
 
     /**
@@ -84,7 +87,7 @@ public class PostService {
         SocialMember author = post.getAuthor();
         boolean isLiked = currentUser != null
                 && postLikeRepository.findById(new PostLike.PostLikeId(currentUser.getId(), postId)).isPresent();
-        return new PostResponse(post, author, currentUser, viewCountOverride, isLiked, defaultProfileImage);
+        return new PostResponse(post, author, currentUser, viewCountOverride, isLiked, publicBaseUrl, defaultProfileImage);
     }
 
     /**
@@ -100,7 +103,7 @@ public class PostService {
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_UPDATE_POST);
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
-        return new PostResponse(post, post.getAuthor(), member, null, false, defaultProfileImage);
+        return new PostResponse(post, post.getAuthor(), member, null, false, publicBaseUrl, defaultProfileImage);
     }
 
     /**
@@ -174,7 +177,7 @@ public class PostService {
                 true, keyword, hashtags, authorId, pageable);
 
         List<PostSummaryResponse> responseContent = postPage.getContent().stream()
-                .map(post -> new PostSummaryResponse(post, post.getAuthor(), defaultProfileImage))
+                .map(post -> new PostSummaryResponse(post, post.getAuthor(), publicBaseUrl, defaultProfileImage))
                 .collect(Collectors.toList());
 
         return new PageResponse<>(

@@ -29,6 +29,9 @@ public class MemberService {
     private final SocialMemberQueryRepository socialMemberQueryRepository;
     private final FileService fileService;
 
+    @Value("${file.public-base-url}")
+    private String publicBaseUrl;
+
     @Value("${file.default-profile-image}")
     private String defaultProfileImage;
 
@@ -39,7 +42,7 @@ public class MemberService {
     public MemberResponse getMyInfo(Long memberId) {
         SocialMember member = socialMemberQueryRepository.findByIdWithProfileImage(memberId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
-        return new MemberResponse(member, defaultProfileImage);
+        return new MemberResponse(member, publicBaseUrl, defaultProfileImage);
     }
 
     /**
@@ -47,7 +50,7 @@ public class MemberService {
      */
     @Transactional
     public String updateProfileImage(Long memberId, MultipartFile file) {
-
+        // 최적화된 Querydsl 조회 사용
         SocialMember member = socialMemberQueryRepository.findByIdWithProfileImage(memberId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
 
@@ -65,6 +68,6 @@ public class MemberService {
 
         log.info("[프로필 이미지 업데이트 성공] memberId={}, fileId={}", memberId, imageFile.getId());
 
-        return imageFile.getFullUrl();
+        return imageFile.getFullUrl(publicBaseUrl);
     }
 }

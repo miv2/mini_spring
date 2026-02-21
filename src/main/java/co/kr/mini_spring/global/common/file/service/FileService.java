@@ -18,6 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -30,12 +31,10 @@ public class FileService {
     @Value("${file.upload-dir}")
     private String uploadDir;
 
-    @Value("${file.public-base-url:/uploads/}")
-    private String publicBaseUrl;
-
     private final ImageFileRepository imageFileRepository;
 
     private static final List<String> ALLOWED_IMAGE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     /**
      * 이미지를 업로드하고 메타데이터를 DB에 저장합니다.
@@ -46,11 +45,10 @@ public class FileService {
         validateImage(file);
 
         // 2. 경로 및 파일명 생성
-        String datePath = createDatePath();
+        String datePath = createDatePath(); // yyyy/MM/dd
         String originalName = file.getOriginalFilename();
         String extension = extractExtension(originalName);
         String storedName = UUID.randomUUID() + "." + extension;
-        String publicPath = buildPublicPath(datePath);
 
         // 3. 물리적 디렉토리 생성
         Path targetDir = Paths.get(uploadDir, datePath).toAbsolutePath().normalize();
@@ -66,12 +64,12 @@ public class FileService {
             throw new FileException(ResponseCode.FILE_UPLOAD_ERROR, "파일 저장 중 오류가 발생했습니다.");
         }
 
-        // 5. DB 메타데이터 저장
+        // 5. DB 메타데이터 저장 (도메인 없는 순수 날짜 경로만 저장)
         try {
             StoredFile imageFile = StoredFile.builder()
                     .originName(originalName)
                     .storedName(storedName)
-                    .filePath(publicPath)
+                    .filePath(datePath + "/")
                     .fileSize(file.getSize())
                     .extension(extension)
                     .contentType(file.getContentType())
@@ -80,17 +78,14 @@ public class FileService {
 
             return imageFileRepository.save(imageFile);
         } catch (RuntimeException e) {
-            try {
-                Files.deleteIfExists(targetPath);
-            } catch (IOException ex) {
-                log.warn("[파일 정리 실패] path={}, error={}", targetPath, ex.getMessage());
-            }
+            // DB 저장 실패 시 이미 저장된 물리 파일 삭제
+            cleanupPhysicalFile(targetPath);
             throw e;
         }
     }
 
     /**
-     * 여러 이미지를 업로드하고 메타데이터를 DB에 저장합니다.
+     * 여러 이미지를 업로드하고 메타데이터를 DB에 저장합니다. 하나라도 실패하면 전체 롤백.
      */
     @Transactional
     public List<StoredFile> uploadImages(List<MultipartFile> files) {
@@ -98,9 +93,17 @@ public class FileService {
             throw new FileException(ResponseCode.INVALID_INPUT_VALUE, "업로드할 파일이 없습니다.");
         }
 
-        return files.stream()
-                .map(this::uploadImage)
-                .toList();
+        List<StoredFile> savedFiles = new ArrayList<>();
+        try {
+            for (MultipartFile file : files) {
+                savedFiles.add(uploadImage(file));
+            }
+        } catch (RuntimeException e) {
+            // 원자성 확보: 하나라도 실패하면 방금 저장된 모든 파일/레코드 삭제
+            savedFiles.forEach(this::deleteFile);
+            throw e;
+        }
+        return savedFiles;
     }
 
     /**
@@ -110,23 +113,25 @@ public class FileService {
     public void deleteFile(StoredFile storedFile) {
         if (storedFile == null) return;
 
-        // 1. 물리적 파일 삭제 시도
-        try {
-            // public URL 경로에서 날짜 경로(yyyy/MM/dd) 추출 시도
-            String fullPath = storedFile.getFilePath(); // /uploads/2026/02/14/ 형태
-            String relativePath = fullPath.replace(publicBaseUrl, ""); // 2026/02/14/
-            
-            Path targetPath = Paths.get(uploadDir, relativePath, storedFile.getStoredName());
-            Files.deleteIfExists(targetPath);
-            log.info("[파일 물리 삭제 성공] path={}", targetPath);
-        } catch (IOException e) {
-            log.warn("[파일 물리 삭제 실패] error={}", e.getMessage());
-            // 물리 파일 삭제 실패 시에도 DB 데이터는 삭제 시도 (필요에 따라 정책 조정 가능)
-        }
+        // 1. 물리적 파일 삭제
+        // DB의 filePath가 '2026/02/19/' 형태이므로 바로 uploadDir와 조합 가능
+        Path targetPath = Paths.get(uploadDir, storedFile.getFilePath(), storedFile.getStoredName()).toAbsolutePath().normalize();
+        cleanupPhysicalFile(targetPath);
 
         // 2. DB 메타데이터 삭제
         imageFileRepository.delete(storedFile);
         log.info("[파일 DB 레코드 삭제 성공] fileId={}", storedFile.getId());
+    }
+
+    private void cleanupPhysicalFile(Path path) {
+        try {
+            if (Files.exists(path)) {
+                Files.delete(path);
+                log.info("[물리 파일 삭제 성공] path={}", path);
+            }
+        } catch (IOException e) {
+            log.warn("[물리 파일 삭제 실패] path={}, error={}", path, e.getMessage());
+        }
     }
 
     /**
@@ -135,6 +140,10 @@ public class FileService {
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new FileException(ResponseCode.INVALID_INPUT_VALUE, "업로드할 파일이 없습니다.");
+        }
+
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new FileException(ResponseCode.INVALID_INPUT_VALUE, "파일 크기는 10MB를 초과할 수 없습니다.");
         }
 
         String extension = extractExtension(file.getOriginalFilename());
@@ -152,16 +161,10 @@ public class FileService {
         }
     }
 
-    /**
-     * 날짜별 디렉토리 경로 생성 (yyyy/MM/dd)
-     */
     private String createDatePath() {
         return LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
     }
 
-    /**
-     * 디렉토리가 없으면 생성
-     */
     private void createDirectory(Path path) {
         try {
             if (!Files.exists(path)) {
@@ -170,23 +173,6 @@ public class FileService {
         } catch (IOException e) {
             throw new FileException(ResponseCode.FILE_UPLOAD_ERROR, "디렉토리 생성에 실패했습니다.");
         }
-    }
-
-    /**
-     * 공개 경로를 생성합니다. (항상 / 로 끝나도록 보정)
-     */
-    private String buildPublicPath(String datePath) {
-        String base = publicBaseUrl == null ? "/uploads/" : publicBaseUrl.trim();
-        
-        // http로 시작하지 않을 때만 맨 앞에 /가 없으면 붙여줌
-        if (!base.startsWith("http") && !base.startsWith("/")) {
-            base = "/" + base;
-        }
-        
-        if (!base.endsWith("/")) {
-            base = base + "/";
-        }
-        return base + datePath + "/";
     }
 
     /**
@@ -208,15 +194,12 @@ public class FileService {
                     && header[4] == 0x0D && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A;
             case "gif" -> header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38
                     && (header[4] == 0x37 || header[4] == 0x39) && header[5] == 0x61;
-            case "webp" -> header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
+            case "webp" -> header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38
                     && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50;
             default -> false;
         };
     }
 
-    /**
-     * 파일 확장자 추출
-     */
     private String extractExtension(String filename) {
         if (filename == null || !filename.contains(".")) {
             return "unknown";

@@ -67,7 +67,7 @@ public class PostResponse {
      * @param post        게시글 엔티티
      * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
      */
-    public PostResponse(Post post, SocialMember author, SocialMember currentUser, Integer viewCountOverride, boolean isLiked, String defaultProfileImage) {
+    public PostResponse(Post post, SocialMember author, SocialMember currentUser, Integer viewCountOverride, boolean isLiked, String baseUrl, String defaultProfileImage) {
         this.id = post.getId();
         this.title = post.getTitle();
         this.content = post.getContent();
@@ -75,7 +75,7 @@ public class PostResponse {
         this.likeCount = post.getLikeCount();
         this.memberId = post.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
-        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(baseUrl, defaultProfileImage) : defaultProfileImage;
         this.createdAt = post.getCreatedAt();
         this.updatedAt = post.getUpdatedAt();
 

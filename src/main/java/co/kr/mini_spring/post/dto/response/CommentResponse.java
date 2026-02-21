@@ -63,12 +63,12 @@ public class CommentResponse {
      * @param author      작성자 엔티티
      * @param currentUser 현재 로그인한 사용자 (작성자 여부 확인용)
      */
-    public CommentResponse(Comment comment, SocialMember author, SocialMember currentUser, String defaultProfileImage) {
+    public CommentResponse(Comment comment, SocialMember author, SocialMember currentUser, String baseUrl, String defaultProfileImage) {
         this.id = comment.getId();
         this.content = comment.isDeleted() ? "삭제된 댓글입니다." : comment.getContent();
         this.memberId = comment.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
-        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(baseUrl, defaultProfileImage) : defaultProfileImage;
         this.parentId = (comment.getParent() != null) ? comment.getParent().getId() : null;
         this.isDeleted = comment.isDeleted();
         this.createdAt = comment.getCreatedAt();
@@ -79,12 +79,12 @@ public class CommentResponse {
     }
 
     public CommentResponse(Comment comment, SocialMember author, SocialMember currentUser,
-            List<CommentResponse> children, String defaultProfileImage) {
+            List<CommentResponse> children, String baseUrl, String defaultProfileImage) {
         this.id = comment.getId();
         this.content = comment.isDeleted() ? "삭제된 댓글입니다." : comment.getContent();
         this.memberId = comment.getAuthorId();
         this.memberName = author != null ? author.getNickname() : null;
-        this.profileImageUrl = author != null ? author.getProfileImageUrl(defaultProfileImage) : defaultProfileImage;
+        this.profileImageUrl = author != null ? author.getProfileImageUrl(baseUrl, defaultProfileImage) : defaultProfileImage;
         this.parentId = (comment.getParent() != null) ? comment.getParent().getId() : null;
         this.isDeleted = comment.isDeleted();
         this.createdAt = comment.getCreatedAt();

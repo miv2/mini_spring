@@ -88,8 +88,8 @@ public class SocialMember {
         this.profileImage = profileImage;
     }
 
-    public String getProfileImageUrl(String defaultUrl) {
-        return profileImage != null ? profileImage.getFullUrl() : defaultUrl;
+    public String getProfileImageUrl(String baseUrl, String defaultUrl) {
+        return profileImage != null ? profileImage.getFullUrl(baseUrl) : defaultUrl;
     }
 
     public void updateProfile(String name, String nickname) {
