@@ -131,7 +131,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
         if (isNewMember) {
             StoredFile defaultFile = imageFileRepository.findById(DEFAULT_PROFILE_IMAGE_ID)
                     .orElseThrow(() -> new BusinessException(ResponseCode.FILE_NOT_FOUND,
-                            "기본 프로필 이미지(12)를 찾을 수 없습니다."));
+                            "기본 프로필 이미지를 찾을 수 없습니다."));
             member.updateProfileImage(defaultFile);
         } else if (member.getProfileImage() == null) {
             applyDefaultProfileImage(member);
