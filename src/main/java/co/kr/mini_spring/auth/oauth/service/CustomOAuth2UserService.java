@@ -1,6 +1,7 @@
 package co.kr.mini_spring.auth.oauth.service;
 
 import co.kr.mini_spring.global.common.exception.BusinessException;
+import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
 
 import co.kr.mini_spring.member.domain.SocialMember;
@@ -44,6 +45,8 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 
     @Value("${file.default-profile-image:/uploads/default-profile.png}")
     private String defaultProfileImagePath;
+
+    private static final Long DEFAULT_PROFILE_IMAGE_ID = 12L;
 
     /**
      * Spring Security가 소셜 로그인 성공 시 호출하는 메인 메서드입니다.
@@ -107,6 +110,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             memberOptional = socialMemberRepository.findByEmail(attributes.getEmail());
         }
 
+        boolean isNewMember = memberOptional.isEmpty();
         SocialMember member = memberOptional.orElseGet(() -> {
             String nickname = NicknameGenerator
                     .generateUniqueNickname(n -> socialMemberRepository.findByNickname(n).isPresent());
@@ -124,7 +128,12 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
             member.updateProfile(attributes.getName(), member.getNickname());
         }
 
-        if (member.getProfileImage() == null) {
+        if (isNewMember) {
+            StoredFile defaultFile = imageFileRepository.findById(DEFAULT_PROFILE_IMAGE_ID)
+                    .orElseThrow(() -> new BusinessException(ResponseCode.FILE_NOT_FOUND,
+                            "기본 프로필 이미지(12)를 찾을 수 없습니다."));
+            member.updateProfileImage(defaultFile);
+        } else if (member.getProfileImage() == null) {
             applyDefaultProfileImage(member);
         }
 
