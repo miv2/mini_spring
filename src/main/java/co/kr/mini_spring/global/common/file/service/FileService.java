@@ -10,6 +10,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -121,6 +123,34 @@ public class FileService {
         // 2. DB 메타데이터 삭제
         imageFileRepository.delete(storedFile);
         log.info("[파일 DB 레코드 삭제 성공] fileId={}", storedFile.getId());
+    }
+
+    /**
+     * DB 레코드 삭제는 트랜잭션 안에서 수행하고, 물리 파일 삭제는 커밋 이후에 수행합니다.
+     * (롤백 시 물리 파일이 먼저 삭제되는 문제 방지)
+     */
+    @Transactional
+    public void deleteFileAfterCommit(StoredFile storedFile) {
+        if (storedFile == null) return;
+
+        Path targetPath = Paths.get(uploadDir, storedFile.getFilePath(), storedFile.getStoredName())
+                .toAbsolutePath()
+                .normalize();
+
+        imageFileRepository.delete(storedFile);
+        log.info("[파일 DB 레코드 삭제 성공] fileId={}", storedFile.getId());
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    cleanupPhysicalFile(targetPath);
+                }
+            });
+        } else {
+            // 트랜잭션 외부 호출 방어
+            cleanupPhysicalFile(targetPath);
+        }
     }
 
     private void cleanupPhysicalFile(Path path) {

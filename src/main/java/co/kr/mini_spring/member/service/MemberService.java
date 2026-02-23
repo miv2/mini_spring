@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Paths;
+
 /**
  * 회원 서비스 (OAuth2 전용)
  * - 프로필 조회
@@ -54,20 +56,25 @@ public class MemberService {
         SocialMember member = socialMemberQueryRepository.findByIdWithProfileImage(memberId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.MEMBER_NOT_FOUND));
 
-        // 1. 기존 이미지가 있다면 물리적 파일 및 DB 레코드 삭제
         StoredFile oldImage = member.getProfileImage();
-        if (oldImage != null) {
-            fileService.deleteFile(oldImage);
-        }
-
-        // 2. 새 이미지 파일 저장
+        // 1. 새 이미지 파일 저장
         StoredFile imageFile = fileService.uploadImage(file);
 
-        // 3. 멤버 엔티티의 프로필 이미지 업데이트
+        // 2. 멤버 엔티티의 프로필 이미지 업데이트
         member.updateProfileImage(imageFile);
+
+        // 3. 기존 이미지는 커밋 이후에 물리 삭제 (기본 프로필 이미지는 제외)
+        if (oldImage != null && !isDefaultProfileImage(oldImage)) {
+            fileService.deleteFileAfterCommit(oldImage);
+        }
 
         log.info("[프로필 이미지 업데이트 성공] memberId={}, fileId={}", memberId, imageFile.getId());
 
         return imageFile.getFullUrl(publicBaseUrl);
+    }
+
+    private boolean isDefaultProfileImage(StoredFile image) {
+        String defaultFileName = Paths.get(defaultProfileImage).getFileName().toString();
+        return defaultFileName.equalsIgnoreCase(image.getStoredName());
     }
 }
