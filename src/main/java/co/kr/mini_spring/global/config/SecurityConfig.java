@@ -103,7 +103,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // 리액트 개발 서버 및 서버 주소 허용
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8081", "https://minispring.duckdns.org"));
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8081", "https://minispring.duckdns.org", "https://minireact.duckdns.org"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

@@ -88,7 +88,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         
         CookieUtil.setAuthCookies(request, response, tokenResponse);
 
-        return "http://localhost:5173/home";
+        return "https://minireact.duckdns.org/home";
     }
 
     private String resolveEmail(String registrationId, Map<String, Object> attributes) {
