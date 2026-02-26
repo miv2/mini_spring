@@ -133,6 +133,8 @@ public class PostService {
 
         Post post = postQueryRepository.findByIdWithPessimisticLock(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
+        if (postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)).isPresent())
+            return;
         PostLike newLike = PostLike.builder()
                 .id(new PostLike.PostLikeId(memberId, postId))
                 .post(post)
@@ -199,8 +201,8 @@ public class PostService {
             return false;
 
         String viewKey = "post:view:member:" + memberId + ":post:" + post.getId();
-        if (Boolean.FALSE.equals(redisTemplate.hasKey(viewKey))) {
-            redisTemplate.opsForValue().set(viewKey, "viewed", VIEW_COUNT_INTERVAL);
+        Boolean firstView = redisTemplate.opsForValue().setIfAbsent(viewKey, "viewed", VIEW_COUNT_INTERVAL);
+        if (Boolean.TRUE.equals(firstView)) {
             postQueryRepository.incrementViewCount(post.getId());
             return true;
         }
