@@ -34,12 +34,12 @@ public class CommentQueryRepository {
                 .where(
                         comment.post.id.eq(postId),
                         comment.parent.isNull())
-                .orderBy(comment.id.desc())
+                .orderBy(comment.createdAt.desc(), comment.id.desc())
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
 
-        long total = queryFactory
+        Long total = queryFactory
                 .select(comment.count())
                 .from(comment)
                 .where(
@@ -47,7 +47,8 @@ public class CommentQueryRepository {
                         comment.parent.isNull())
                 .fetchOne();
 
-        return new PageImpl<>(content, pageable, total);
+        long safeTotal = (total == null) ? 0L : total;
+        return new PageImpl<>(content, pageable, safeTotal);
     }
 
     /**
