@@ -46,7 +46,7 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
     @Value("${file.default-profile-image:/uploads/default-profile.png}")
     private String defaultProfileImagePath;
 
-    private static final Long DEFAULT_PROFILE_IMAGE_ID = 12L;
+    private static final Long DEFAULT_PROFILE_IMAGE_ID = 18L;
 
     /**
      * Spring Security가 소셜 로그인 성공 시 호출하는 메인 메서드입니다.
