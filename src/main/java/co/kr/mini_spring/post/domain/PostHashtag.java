@@ -19,12 +19,12 @@ public class PostHashtag {
     private PostHashtagId id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("postId") // 복합 키 클래스의 postId 필드에 매핑
+    @MapsId("postId")
     @JoinColumn(name = "post_id")
     private Post post;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("hashtagId") // 복합 키 클래스의 hashtagId 필드에 매핑
+    @MapsId("hashtagId")
     @JoinColumn(name = "hashtag_id")
     private Hashtag hashtag;
 
@@ -32,7 +32,6 @@ public class PostHashtag {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    // 복합 키 클래스
     @Embeddable
     @Getter
     @NoArgsConstructor

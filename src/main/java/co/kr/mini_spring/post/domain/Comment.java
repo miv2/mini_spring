@@ -2,7 +2,9 @@ package co.kr.mini_spring.post.domain;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -20,7 +22,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@org.hibernate.annotations.SQLRestriction("deleted_at IS NULL")
+@SQLRestriction("deleted_at IS NULL")
 public class Comment {
 
     @Id
@@ -41,7 +43,7 @@ public class Comment {
     @JoinColumn(name = "parent_comment_id")
     private Comment parent;
 
-    @org.hibernate.annotations.BatchSize(size = 100)
+    @BatchSize(size = 100)
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Comment> children = new ArrayList<>();
