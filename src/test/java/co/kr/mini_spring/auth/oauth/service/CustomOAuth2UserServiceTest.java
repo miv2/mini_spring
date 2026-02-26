@@ -58,7 +58,7 @@ class CustomOAuth2UserServiceTest {
                 .extension("png")
                 .contentType("image/png")
                 .build();
-        ReflectionTestUtils.setField(defaultFile, "id", 12L);
+        ReflectionTestUtils.setField(defaultFile, "id", 18L);
 
         when(socialMemberRepository.findByProviderAndOauthId(MemberProvider.GOOGLE, "oauth-123"))
                 .thenReturn(Optional.empty());
@@ -66,7 +66,7 @@ class CustomOAuth2UserServiceTest {
                 .thenReturn(Optional.empty());
         when(socialMemberRepository.findByNickname(anyString()))
                 .thenReturn(Optional.empty());
-        when(imageFileRepository.findById(12L))
+        when(imageFileRepository.findById(18L))
                 .thenReturn(Optional.of(defaultFile));
         when(socialMemberRepository.save(any(SocialMember.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
@@ -74,7 +74,7 @@ class CustomOAuth2UserServiceTest {
         SocialMember saved = ReflectionTestUtils.invokeMethod(service, "findOrCreateMember", attributes);
 
         assertThat(saved.getProfileImage()).isNotNull();
-        assertThat(saved.getProfileImage().getId()).isEqualTo(12L);
+        assertThat(saved.getProfileImage().getId()).isEqualTo(18L);
     }
 
     @Test
