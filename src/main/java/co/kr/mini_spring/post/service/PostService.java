@@ -20,6 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -171,11 +173,11 @@ public class PostService {
                key = "#pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort + ':' + #keyword + ':' + #hashtags + ':' + #authorId",
                unless = "#result == null")
     public PageResponse<PostSummaryResponse> getPublishedPosts(
-            org.springframework.data.domain.Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
+            Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
         
         log.info("[Cache Miss] 게시글 목록을 DB에서 조회합니다. page={}, keyword={}", pageable.getPageNumber(), keyword);
 
-        org.springframework.data.domain.Page<Post> postPage = postQueryRepository.findAllByPublishedPage(
+        Page<Post> postPage = postQueryRepository.findAllByPublishedPage(
                 true, keyword, hashtags, authorId, pageable);
 
         List<PostSummaryResponse> responseContent = postPage.getContent().stream()
