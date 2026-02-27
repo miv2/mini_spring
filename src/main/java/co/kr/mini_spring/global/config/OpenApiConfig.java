@@ -55,14 +55,12 @@ public class OpenApiConfig {
                                                 .addList(BEARER_SCHEME));
         }
 
-        /**
-         * /api/** 경로에 대한 OpenAPI 그룹 정의 (Swagger UI에 확실히 노출되도록).
-         */
-        @Bean
-        public GroupedOpenApi apiGroup() {
+            @Bean
+            public GroupedOpenApi apiGroup() {
                 return GroupedOpenApi.builder()
-                                .group("유저 API")
-                                .pathsToMatch("/api/**")
-                                .build();
+                        .group("전체 API")
+                        .pathsToMatch("/api/**")
+                        .build();
+            }
         }
-}
+        

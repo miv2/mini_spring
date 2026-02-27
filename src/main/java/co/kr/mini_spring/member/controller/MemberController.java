@@ -27,6 +27,8 @@ public class MemberController {
 
     @Operation(summary = "내 정보 조회", description = "현재 로그인한 사용자의 프로필 정보를 조회합니다.")
     @GetMapping("/me")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
     public ApiResponse<MemberResponse> getMyInfo(
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter
     ) {
@@ -40,6 +42,8 @@ public class MemberController {
 
     @Operation(summary = "프로필 이미지 수정", description = "현재 로그인한 사용자의 프로필 이미지를 업데이트합니다.")
     @PostMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
     public ApiResponse<String> updateProfileImage(
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter,
             @RequestParam("file") MultipartFile file

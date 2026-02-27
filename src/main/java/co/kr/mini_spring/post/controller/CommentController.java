@@ -54,6 +54,9 @@ public class CommentController {
      */
     @PostMapping
     @Operation(summary = "댓글/대댓글 생성", description = "게시글에 댓글을 생성하거나 parentId로 대댓글을 생성합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글 또는 부모 댓글을 찾을 수 없음")
     public ApiResponse<CommentResponse> createComment(
             @Valid @RequestBody CommentCreateRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
@@ -71,6 +74,10 @@ public class CommentController {
      */
     @PutMapping("/{commentId}")
     @Operation(summary = "댓글 수정", description = "작성자가 댓글을 수정합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
     public ApiResponse<CommentResponse> updateComment(
             @Parameter(description = "수정할 댓글 ID") @PathVariable Long commentId,
             @Valid @RequestBody CommentUpdateRequest request,
@@ -88,6 +95,10 @@ public class CommentController {
      */
     @DeleteMapping("/{commentId}")
     @Operation(summary = "댓글 삭제", description = "작성자가 댓글을 삭제합니다. 자식이 있으면 소프트 삭제.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
     public ApiResponse<Void> deleteComment(
             @Parameter(description = "삭제할 댓글 ID") @PathVariable Long commentId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {

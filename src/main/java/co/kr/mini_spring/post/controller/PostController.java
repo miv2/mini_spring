@@ -64,6 +64,8 @@ public class PostController {
      */
     @GetMapping("/{postId}")
     @Operation(summary = "게시글 상세 조회", description = "게시글 상세 정보와 댓글/해시태그를 반환합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     public ApiResponse<PostResponse> getPost(
             @Parameter(description = "조회할 게시글 ID") @PathVariable Long postId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
@@ -80,6 +82,8 @@ public class PostController {
      */
     @PostMapping
     @Operation(summary = "게시글 생성", description = "인증된 사용자가 새 게시글을 생성합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
     public ApiResponse<PostResponse> createPost(
             @Valid @RequestBody PostCreateRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
@@ -96,6 +100,9 @@ public class PostController {
      */
     @PostMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요", description = "게시글에 좋아요를 추가합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     public ApiResponse<Void> addLike(
             @Parameter(description = "좋아요를 누를 게시글 ID") @PathVariable Long postId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
@@ -112,6 +119,9 @@ public class PostController {
      */
     @DeleteMapping("/{postId}/likes")
     @Operation(summary = "게시글 좋아요 취소", description = "게시글의 좋아요를 취소합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     public ApiResponse<Void> removeLike(
             @Parameter(description = "좋아요를 취소할 게시글 ID") @PathVariable Long postId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
@@ -129,6 +139,10 @@ public class PostController {
      */
     @PutMapping("/{postId}")
     @Operation(summary = "게시글 수정", description = "작성자가 게시글을 수정합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     public ApiResponse<PostResponse> updatePost(
             @Parameter(description = "수정할 게시글 ID") @PathVariable Long postId,
             @Valid @RequestBody PostUpdateRequest request,
@@ -146,6 +160,10 @@ public class PostController {
      */
     @DeleteMapping("/{postId}")
     @Operation(summary = "게시글 삭제", description = "작성자가 게시글을 삭제합니다.")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글을 찾을 수 없음")
     public ApiResponse<Void> deletePost(
             @Parameter(description = "삭제할 게시글 ID") @PathVariable Long postId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
