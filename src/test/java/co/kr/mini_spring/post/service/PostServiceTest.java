@@ -12,13 +12,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,7 +63,7 @@ class PostServiceTest {
     }
 
     @Test
-    void 좋아요_경쟁상황에서_락_후_중복이면_저장하지_않는다() {
+    void addLike는_중복이어도_락을_먼저_획득한다() {
         Long memberId = 1L;
         Long postId = 2L;
 
@@ -70,17 +74,69 @@ class PostServiceTest {
                 .build();
 
         when(postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)))
-                .thenReturn(Optional.empty(), Optional.of(PostLike.builder()
+                .thenReturn(Optional.of(PostLike.builder()
                         .id(new PostLike.PostLikeId(memberId, postId))
                         .post(post)
                         .build()));
-        when(postQueryRepository.findByIdWithPessimisticLock(postId))
+        lenient().when(postQueryRepository.findByIdWithPessimisticLock(postId))
                 .thenReturn(Optional.of(post));
 
         postService.addLike(postId, memberId);
 
+        verify(postQueryRepository, times(1)).findByIdWithPessimisticLock(postId);
+        verify(postLikeRepository, times(1)).findById(new PostLike.PostLikeId(memberId, postId));
         verify(postLikeRepository, never()).save(any(PostLike.class));
         assertThat(post.getLikeCount()).isEqualTo(0);
+    }
+
+    @Test
+    void removeLike는_락을_먼저_획득한_후_좋아요를_확인한다() {
+        Long memberId = 1L;
+        Long postId = 2L;
+        Post post = Post.builder()
+                .id(postId)
+                .authorId(999L)
+                .likeCount(1)
+                .build();
+        PostLike postLike = PostLike.builder()
+                .id(new PostLike.PostLikeId(memberId, postId))
+                .post(post)
+                .build();
+
+        when(postQueryRepository.findByIdWithPessimisticLock(postId))
+                .thenReturn(Optional.of(post));
+        when(postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)))
+                .thenReturn(Optional.of(postLike));
+
+        postService.removeLike(postId, memberId);
+
+        InOrder inOrder = inOrder(postQueryRepository, postLikeRepository);
+        inOrder.verify(postQueryRepository).findByIdWithPessimisticLock(postId);
+        inOrder.verify(postLikeRepository).findById(new PostLike.PostLikeId(memberId, postId));
+    }
+
+    @Test
+    void 캐시_키는_해시태그_순서와_무관해야한다() {
+        PageRequest pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        String key1 = (String) ReflectionTestUtils.invokeMethod(
+                postService,
+                "buildPostsCacheKey",
+                pageable,
+                "keyword",
+                List.of("spring", "java"),
+                7L
+        );
+        String key2 = (String) ReflectionTestUtils.invokeMethod(
+                postService,
+                "buildPostsCacheKey",
+                pageable,
+                "keyword",
+                List.of("java", "spring"),
+                7L
+        );
+
+        assertThat(key1).isEqualTo(key2);
     }
 
     @Test

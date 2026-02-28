@@ -69,6 +69,7 @@ public class PostService {
                 .build();
         postRepository.save(post);
         hashtagService.attachHashtagsToPost(post, request.getHashtags());
+        log.info("[게시글 작성 완료] postId={}, authorId={}", post.getId(), member.getId());
         return new PostResponse(post, author, author, 0, false, publicBaseUrl, defaultProfileImage);
     }
 
@@ -89,6 +90,8 @@ public class PostService {
         SocialMember author = post.getAuthor();
         boolean isLiked = currentUser != null
                 && postLikeRepository.findById(new PostLike.PostLikeId(currentUser.getId(), postId)).isPresent();
+        log.debug("[게시글 상세 조회] postId={}, viewerId={}, isLiked={}",
+                postId, currentUser == null ? null : currentUser.getId(), isLiked);
         return new PostResponse(post, author, currentUser, viewCountOverride, isLiked, publicBaseUrl, defaultProfileImage);
     }
 
@@ -105,6 +108,7 @@ public class PostService {
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_UPDATE_POST);
         post.update(request.getTitle(), request.getContent());
         hashtagService.updateHashtagsForPost(post, request.getHashtags());
+        log.info("[게시글 수정 완료] postId={}, memberId={}", postId, member.getId());
         return new PostResponse(post, post.getAuthor(), member, null, false, publicBaseUrl, defaultProfileImage);
     }
 
@@ -120,6 +124,7 @@ public class PostService {
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
         requireOwnership(post, member, ResponseCode.NO_PERMISSION_TO_DELETE_POST);
         post.delete();
+        log.info("[게시글 삭제 완료] postId={}, memberId={}", postId, member.getId());
     }
 
     /**
@@ -130,19 +135,20 @@ public class PostService {
     public void addLike(Long postId, Long memberId) {
         if (memberId == null)
             throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        if (postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)).isPresent())
-            return;
-
         Post post = postQueryRepository.findByIdWithPessimisticLock(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
-        if (postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)).isPresent())
+        PostLike.PostLikeId likeId = new PostLike.PostLikeId(memberId, postId);
+        if (postLikeRepository.findById(likeId).isPresent()) {
+            log.debug("[좋아요 중복 요청 무시] postId={}, memberId={}", postId, memberId);
             return;
+        }
         PostLike newLike = PostLike.builder()
-                .id(new PostLike.PostLikeId(memberId, postId))
+                .id(likeId)
                 .post(post)
                 .build();
         postLikeRepository.save(newLike);
         post.increaseLikeCount();
+        log.info("[좋아요 추가 완료] postId={}, memberId={}, likeCount={}", postId, memberId, post.getLikeCount());
     }
 
     /**
@@ -153,14 +159,17 @@ public class PostService {
     public void removeLike(Long postId, Long memberId) {
         if (memberId == null)
             throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        PostLike postLike = postLikeRepository.findById(new PostLike.PostLikeId(memberId, postId)).orElse(null);
-        if (postLike == null)
-            return;
-
         Post post = postQueryRepository.findByIdWithPessimisticLock(postId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.POST_NOT_FOUND));
+        PostLike.PostLikeId likeId = new PostLike.PostLikeId(memberId, postId);
+        PostLike postLike = postLikeRepository.findById(likeId).orElse(null);
+        if (postLike == null) {
+            log.debug("[좋아요 취소 요청 무시] postId={}, memberId={}", postId, memberId);
+            return;
+        }
         postLikeRepository.delete(postLike);
         post.decreaseLikeCount();
+        log.info("[좋아요 취소 완료] postId={}, memberId={}, likeCount={}", postId, memberId, post.getLikeCount());
     }
 
     /**
@@ -170,7 +179,7 @@ public class PostService {
      * - key: 페이지 번호, 검색어, 태그 등 파라미터를 조합하여 유일한 키를 생성합니다.
      */
     @Cacheable(value = "posts",
-               key = "#pageable.pageNumber + ':' + #pageable.pageSize + ':' + #pageable.sort + ':' + #keyword + ':' + #hashtags + ':' + #authorId",
+               key = "#root.target.buildPostsCacheKey(#pageable, #keyword, #hashtags, #authorId)",
                unless = "#result == null")
     public PageResponse<PostSummaryResponse> getPublishedPosts(
             Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
@@ -195,6 +204,24 @@ public class PostService {
     }
 
     /**
+     * 게시글 목록 조회 캐시 키를 정규화해 생성합니다.
+     * 태그 순서가 달라도 동일 의미의 요청이면 같은 키를 사용합니다.
+     */
+    public String buildPostsCacheKey(Pageable pageable, String keyword, List<String> hashtags, Long authorId) {
+        String normalizedKeyword = keyword == null ? "" : keyword.trim();
+        String normalizedHashtags = hashtags == null ? "" : hashtags.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(tag -> !tag.isEmpty())
+                .sorted()
+                .collect(Collectors.joining(","));
+        String normalizedAuthorId = authorId == null ? "" : authorId.toString();
+
+        return pageable.getPageNumber() + ":" + pageable.getPageSize() + ":" + pageable.getSort()
+                + ":" + normalizedKeyword + ":" + normalizedHashtags + ":" + normalizedAuthorId;
+    }
+
+    /**
      * Redis 기반 조회수 업데이트 (1시간 쿨타임)
      */
     private boolean updateViewCount(Post post, SocialMember currentUser) {
@@ -206,16 +233,24 @@ public class PostService {
         Boolean firstView = redisTemplate.opsForValue().setIfAbsent(viewKey, "viewed", VIEW_COUNT_INTERVAL);
         if (Boolean.TRUE.equals(firstView)) {
             postQueryRepository.incrementViewCount(post.getId());
+            log.debug("[조회수 증가] postId={}, memberId={}, interval={}", post.getId(), memberId, VIEW_COUNT_INTERVAL);
             return true;
         }
+        log.debug("[조회수 증가 스킵] postId={}, memberId={}", post.getId(), memberId);
         return false;
     }
 
+    /**
+     * 인증 사용자 필수 검증입니다.
+     */
     private void requireAuthenticated(SocialMember member) {
         if (member == null)
             throw new BusinessException(ResponseCode.UNAUTHENTICATED);
     }
 
+    /**
+     * 게시글 작성자 본인인지 검증합니다.
+     */
     private void requireOwnership(Post post, SocialMember member, ResponseCode noPermissionCode) {
         if (post.getAuthorId() == null || member == null || !Objects.equals(post.getAuthorId(), member.getId())) {
             throw new BusinessException(noPermissionCode);
