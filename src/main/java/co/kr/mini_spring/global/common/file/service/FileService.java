@@ -102,7 +102,15 @@ public class FileService {
             }
         } catch (RuntimeException e) {
             // 원자성 확보: 하나라도 실패하면 방금 저장된 모든 파일/레코드 삭제
-            savedFiles.forEach(this::deleteFile);
+            for (StoredFile savedFile : savedFiles) {
+                try {
+                    deleteFile(savedFile);
+                } catch (RuntimeException cleanupException) {
+                    log.warn("[다중 업로드 보상 삭제 실패] fileId={}, error={}",
+                            savedFile.getId(), cleanupException.getMessage());
+                    e.addSuppressed(cleanupException);
+                }
+            }
             throw e;
         }
         return savedFiles;
@@ -224,7 +232,7 @@ public class FileService {
                     && header[4] == 0x0D && header[5] == 0x0A && header[6] == 0x1A && header[7] == 0x0A;
             case "gif" -> header[0] == 0x47 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38
                     && (header[4] == 0x37 || header[4] == 0x39) && header[5] == 0x61;
-            case "webp" -> header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x38
+            case "webp" -> header[0] == 0x52 && header[1] == 0x49 && header[2] == 0x46 && header[3] == 0x46
                     && header[8] == 0x57 && header[9] == 0x45 && header[10] == 0x42 && header[11] == 0x50;
             default -> false;
         };
