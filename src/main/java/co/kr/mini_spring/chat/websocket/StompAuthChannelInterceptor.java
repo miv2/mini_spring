@@ -38,15 +38,19 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
 
         String token = resolveAccessToken(accessor);
         if (token == null || token.isBlank()) {
+            log.warn("[STOMP CONNECT 인증 실패] sessionId={}, reason=no_access_token_cookie", accessor.getSessionId());
             throw new MessagingException(ResponseCode.UNAUTHENTICATED.getMessage());
         }
 
         JwtTokenProvider.JwtValidationResult validation = jwtTokenProvider.validateTokenWithResult(token);
         if (!validation.isValid()) {
+            log.warn("[STOMP CONNECT 인증 실패] sessionId={}, reason=invalid_token, code={}",
+                    accessor.getSessionId(), validation.getErrorCode().getCode());
             throw new MessagingException(validation.getErrorCode().getMessage());
         }
 
         if (isBlacklisted(token)) {
+            log.warn("[STOMP CONNECT 인증 실패] sessionId={}, reason=blacklisted_token", accessor.getSessionId());
             throw new MessagingException(ResponseCode.INVALID_TOKEN.getMessage());
         }
 
@@ -58,7 +62,7 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
                 userDetails.getAuthorities()
         );
         accessor.setUser(authentication);
-        log.debug("[STOMP CONNECT 인증 성공] email={}", email);
+        log.info("[STOMP CONNECT 인증 성공] sessionId={}, email={}", accessor.getSessionId(), email);
         return message;
     }
 
@@ -75,4 +79,3 @@ public class StompAuthChannelInterceptor implements ChannelInterceptor {
         return Boolean.TRUE.equals(exists);
     }
 }
-

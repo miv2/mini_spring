@@ -34,13 +34,19 @@ public class ChatStompController {
                             @Valid @Payload ChatSendMessageRequest request,
                             Principal principal) {
         Long senderId = extractUserId(principal);
+        log.info("[STOMP SEND 요청] roomId={}, senderId={}, clientMessageId={}, type={}, contentLength={}",
+                roomId, senderId, request.getClientMessageId(), request.getType(),
+                request.getContent() == null ? 0 : request.getContent().length());
         ChatMessageResponse response = chatMessageService.sendMessage(roomId, senderId, request);
         simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId, response);
+        log.info("[STOMP SEND 브로드캐스트 완료] roomId={}, messageId={}, senderId={}, eventType={}",
+                roomId, response.getMessageId(), senderId, response.getEventType());
     }
 
     @MessageExceptionHandler(BusinessException.class)
     @SendToUser("/queue/errors")
     public ChatWsErrorResponse handleBusinessException(BusinessException e) {
+        log.warn("[STOMP 비즈니스 예외] code={}, message={}", e.getResponseCode().getCode(), e.getMessage());
         return new ChatWsErrorResponse(e.getResponseCode(), e.getMessage());
     }
 
@@ -62,4 +68,3 @@ public class ChatStompController {
         return memberAdapter.getMember().getId();
     }
 }
-

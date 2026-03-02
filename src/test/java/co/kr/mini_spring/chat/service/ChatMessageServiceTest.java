@@ -8,8 +8,12 @@ import co.kr.mini_spring.chat.domain.repository.*;
 import co.kr.mini_spring.chat.dto.request.ChatSendMessageRequest;
 import co.kr.mini_spring.chat.dto.request.MarkReadRequest;
 import co.kr.mini_spring.chat.dto.response.ChatMessageResponse;
+import co.kr.mini_spring.chat.dto.response.ChatMessageSliceResponse;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.member.domain.MemberProvider;
+import co.kr.mini_spring.member.domain.SocialMember;
+import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,12 +49,20 @@ class ChatMessageServiceTest {
     @Mock
     private ChatPermissionQueryRepository chatPermissionQueryRepository;
     @Mock
+    private SocialMemberRepository socialMemberRepository;
+    @Mock
     private StringRedisTemplate stringRedisTemplate;
     @Mock
     private ValueOperations<String, String> valueOperations;
 
     @InjectMocks
     private ChatMessageService chatMessageService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void setUp() {
+        ReflectionTestUtils.setField(chatMessageService, "filePublicBaseUrl", "https://minispring.duckdns.org/uploads/");
+        ReflectionTestUtils.setField(chatMessageService, "defaultProfileImage", "/uploads/default-profile.png");
+    }
 
     @Test
     void sendMessage_초당_3건_초과시_예외가_발생한다() {
@@ -105,6 +118,38 @@ class ChatMessageServiceTest {
     }
 
     @Test
+    void deleteMessage_성공시_삭제이벤트용_응답을_반환한다() {
+        Long messageId = 6L;
+        Long roomId = 99L;
+        Long userId = 7L;
+        Message message = Message.builder()
+                .id(messageId)
+                .conversationId(roomId)
+                .senderId(userId)
+                .clientMessageId("delete-msg")
+                .type(MessageType.TEXT)
+                .content("삭제 전 메시지")
+                .createdAt(LocalDateTime.now().minusMinutes(1))
+                .build();
+        Conversation room = Conversation.builder()
+                .id(roomId)
+                .type(ConversationType.DIRECT)
+                .ownerId(userId)
+                .build();
+
+        when(messageRepository.findByIdAndDeletedAtIsNull(messageId)).thenReturn(Optional.of(message));
+        when(conversationRepository.findByIdAndDeletedAtIsNull(roomId)).thenReturn(Optional.of(room));
+        when(chatMessageQueryRepository.findLatestMessageId(roomId)).thenReturn(Optional.empty());
+
+        ChatMessageResponse response = chatMessageService.deleteMessage(messageId, userId);
+
+        assertThat(response.isDeleted()).isTrue();
+        assertThat(response.getContent()).isEqualTo("삭제된 메시지입니다.");
+        assertThat(response.getEventType()).isEqualTo("MESSAGE_DELETED");
+        assertThat(response.getDeletedBy()).isEqualTo(userId);
+    }
+
+    @Test
     void markRead_다른_방의_메시지를_요청하면_실패한다() {
         Long roomId = 100L;
         Long userId = 200L;
@@ -129,6 +174,36 @@ class ChatMessageServiceTest {
         assertThatThrownBy(() -> chatMessageService.markAsRead(roomId, userId, request))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getResponseCode()).isEqualTo(ResponseCode.CHAT_INVALID_REQUEST));
+    }
+
+    @Test
+    void getMessages_그룹채팅에서_차단한사용자_메시지는_제외조회한다() {
+        Long roomId = 100L;
+        Long userId = 200L;
+
+        when(chatPermissionQueryRepository.getRoomAccess(roomId, userId))
+                .thenReturn(Optional.of(new ChatPermissionQueryRepository.RoomAccess(false, true, false, ConversationType.GROUP)));
+
+        Message visible = Message.builder()
+                .id(300L)
+                .conversationId(roomId)
+                .senderId(201L)
+                .clientMessageId("m-visible")
+                .type(MessageType.TEXT)
+                .content("보이는 메시지")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        when(chatMessageQueryRepository.findMessagesByCursorExcludingBlocked(roomId, userId, null, 51))
+                .thenReturn(List.of(visible));
+
+        ChatMessageSliceResponse response = chatMessageService.getMessages(roomId, userId, null, 50);
+
+        assertThat(response.getMessages()).hasSize(1);
+        verify(chatMessageQueryRepository, times(1))
+                .findMessagesByCursorExcludingBlocked(roomId, userId, null, 51);
+        verify(chatMessageQueryRepository, never())
+                .findMessagesByCursor(anyLong(), any(), anyInt());
     }
 
     @Test
@@ -201,6 +276,52 @@ class ChatMessageServiceTest {
         ChatMessageResponse response = chatMessageService.sendMessage(roomId, userId, request);
 
         assertThat(response.getMessageId()).isEqualTo(202L);
+    }
+
+    @Test
+    void sendMessage_응답에_발신자_닉네임과_프로필이미지가_포함된다() {
+        Long roomId = 55L;
+        Long userId = 66L;
+        ChatSendMessageRequest request = sendMessageRequest("with-profile", "프로필 포함");
+
+        Conversation room = Conversation.builder()
+                .id(roomId)
+                .type(ConversationType.GROUP)
+                .ownerId(userId)
+                .title("room")
+                .build();
+        Message saved = Message.builder()
+                .id(303L)
+                .conversationId(roomId)
+                .senderId(userId)
+                .clientMessageId("with-profile")
+                .type(MessageType.TEXT)
+                .content("프로필 포함")
+                .createdAt(LocalDateTime.now())
+                .build();
+        SocialMember sender = SocialMember.builder()
+                .id(userId)
+                .email("sender@test.com")
+                .provider(MemberProvider.GOOGLE)
+                .oauthId("oauth-1")
+                .name("sender")
+                .nickname("보낸이")
+                .build();
+
+        when(chatPermissionQueryRepository.getRoomAccess(roomId, userId))
+                .thenReturn(Optional.of(new ChatPermissionQueryRepository.RoomAccess(false, true, false, ConversationType.GROUP)));
+        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.increment(anyString())).thenReturn(1L);
+        when(valueOperations.setIfAbsent(anyString(), eq("1"), any(Duration.class))).thenReturn(true);
+        when(conversationRepository.findByIdAndDeletedAtIsNull(roomId)).thenReturn(Optional.of(room));
+        when(messageRepository.existsByConversationIdAndClientMessageId(roomId, "with-profile")).thenReturn(false);
+        when(messageRepository.save(any(Message.class))).thenReturn(saved);
+        when(socialMemberRepository.findById(userId)).thenReturn(Optional.of(sender));
+
+        ChatMessageResponse response = chatMessageService.sendMessage(roomId, userId, request);
+
+        assertThat(response.getSenderNickname()).isEqualTo("보낸이");
+        assertThat(response.getSenderProfileImageUrl()).isEqualTo("/uploads/default-profile.png");
     }
 
     private ChatSendMessageRequest sendMessageRequest(String clientMessageId, String content) {

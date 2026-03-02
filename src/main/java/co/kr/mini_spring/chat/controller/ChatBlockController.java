@@ -7,6 +7,7 @@ import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +23,11 @@ public class ChatBlockController {
 
     @PostMapping("/{userId}")
     @Operation(summary = "사용자 차단")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    })
     public ApiResponse<Void> block(
             @PathVariable Long userId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
@@ -31,6 +37,10 @@ public class ChatBlockController {
 
     @DeleteMapping("/{userId}")
     @Operation(summary = "사용자 차단 해제")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+    })
     public ApiResponse<Void> unblock(
             @PathVariable Long userId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {

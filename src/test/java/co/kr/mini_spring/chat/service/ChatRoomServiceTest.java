@@ -10,6 +10,8 @@ import co.kr.mini_spring.chat.dto.response.ChatRoomResponse;
 import co.kr.mini_spring.chat.dto.response.ChatRoomSliceResponse;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.member.domain.MemberProvider;
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,6 +56,8 @@ class ChatRoomServiceTest {
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(chatRoomService, "maxGroupMembers", 50);
+        ReflectionTestUtils.setField(chatRoomService, "filePublicBaseUrl", "https://minispring.duckdns.org/uploads/");
+        ReflectionTestUtils.setField(chatRoomService, "defaultProfileImage", "/uploads/default-profile.png");
     }
 
     @Test
@@ -194,6 +198,48 @@ class ChatRoomServiceTest {
         assertThat(response.getContent()).hasSize(2);
         assertThat(response.getNextCursor()).isEqualTo(20L);
         verify(chatRoomQueryRepository).findMyRooms(userId, null, 3);
+    }
+
+    @Test
+    void getMyRooms_DIRECT_응답에_상대_닉네임과_프로필이미지가_포함된다() {
+        Long me = 1L;
+        Long peerId = 2L;
+        Long roomId = 30L;
+
+        ChatRoomResponse directRoom = new ChatRoomResponse(
+                roomId,
+                ConversationType.DIRECT,
+                "기존제목",
+                me,
+                "hello",
+                LocalDateTime.now(),
+                0L,
+                2L
+        );
+
+        when(chatRoomQueryRepository.findMyRooms(me, null, 2)).thenReturn(List.of(directRoom));
+        when(conversationParticipantRepository.findByConversationIdInAndDeletedAtIsNull(List.of(roomId)))
+                .thenReturn(List.of(
+                        ConversationParticipant.builder().conversationId(roomId).userId(me).build(),
+                        ConversationParticipant.builder().conversationId(roomId).userId(peerId).build()
+                ));
+        when(socialMemberRepository.findAllById(List.of(peerId)))
+                .thenReturn(List.of(
+                        SocialMember.builder()
+                                .id(peerId)
+                                .email("peer@test.com")
+                                .provider(MemberProvider.GOOGLE)
+                                .oauthId("oauth-peer")
+                                .name("peer")
+                                .nickname("상대닉")
+                                .build()
+                ));
+
+        ChatRoomSliceResponse response = chatRoomService.getMyRooms(me, null, 1);
+
+        ChatRoomResponse room = response.getContent().get(0);
+        assertThat(room.getDisplayName()).isEqualTo("상대닉");
+        assertThat(room.getProfileImageUrl()).isEqualTo("https://minispring.duckdns.org/uploads/default-profile.png");
     }
 
     @Test

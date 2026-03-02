@@ -15,6 +15,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -35,6 +36,9 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
     private final SocialMemberRepository socialMemberRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
+
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @Override
     @Transactional // Refresh Token 저장 로직을 포함하므로 트랜잭션 처리
@@ -88,7 +92,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
         
         CookieUtil.setAuthCookies(request, response, tokenResponse);
 
-        return "https://minireact.duckdns.org/home";
+        return frontendUrl + "/home";
     }
 
     private String resolveEmail(String registrationId, Map<String, Object> attributes) {

@@ -78,3 +78,6 @@ file:
   upload-dir: /app/uploads/ # 리눅스 절대 경로
   public-base-url: "${APP_BASE_URL}/uploads/"
   default-profile-image: "/uploads/default-profile.png"
+
+app:
+  frontend-url: https://minireact.duckdns.org

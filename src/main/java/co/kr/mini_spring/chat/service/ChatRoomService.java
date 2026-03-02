@@ -12,6 +12,7 @@ import co.kr.mini_spring.chat.dto.response.ChatRoomResponse;
 import co.kr.mini_spring.chat.dto.response.ChatRoomSliceResponse;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,8 +21,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URI;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -43,6 +49,12 @@ public class ChatRoomService {
     @Value("${chat.room.max-group-members:50}")
     private int maxGroupMembers;
 
+    @Value("${file.public-base-url}")
+    private String filePublicBaseUrl;
+
+    @Value("${file.default-profile-image:/uploads/default-profile.png}")
+    private String defaultProfileImage;
+
     @Transactional
     public ChatRoomResponse createDirectRoom(Long requesterId, CreateDirectRoomRequest request) {
         ensureMemberExists(requesterId);
@@ -59,7 +71,7 @@ public class ChatRoomService {
             ensureParticipant(existing.getId(), targetUserId);
             chatRoomAccessCacheService.grantAfterCommit(existing.getId(), requesterId);
             chatRoomAccessCacheService.grantAfterCommit(existing.getId(), targetUserId);
-            return new ChatRoomResponse(existing);
+            return enrichSingleRoom(requesterId, new ChatRoomResponse(existing));
         }
 
         Conversation conversation;
@@ -87,7 +99,7 @@ public class ChatRoomService {
 
         log.info("[채팅방 생성] type=DIRECT roomId={}, requester={}, target={}",
                 conversation.getId(), requesterId, targetUserId);
-        return new ChatRoomResponse(conversation);
+        return enrichSingleRoom(requesterId, new ChatRoomResponse(conversation));
     }
 
     @Transactional
@@ -106,7 +118,7 @@ public class ChatRoomService {
         ensureParticipant(conversation.getId(), requesterId);
         chatRoomAccessCacheService.grantAfterCommit(conversation.getId(), requesterId);
         log.info("[채팅방 생성] type=GROUP roomId={}, ownerId={}", conversation.getId(), requesterId);
-        return new ChatRoomResponse(conversation);
+        return enrichSingleRoom(requesterId, new ChatRoomResponse(conversation));
     }
 
     public ChatRoomSliceResponse getMyRooms(Long userId, Long cursor, Integer size) {
@@ -115,8 +127,9 @@ public class ChatRoomService {
         List<ChatRoomResponse> fetched = chatRoomQueryRepository.findMyRooms(userId, safeCursor, safeSize + 1);
         boolean hasNext = fetched.size() > safeSize;
         List<ChatRoomResponse> content = hasNext ? fetched.subList(0, safeSize) : fetched;
+        List<ChatRoomResponse> enriched = enrichRoomsForDisplay(userId, content);
         Long nextCursor = hasNext && !content.isEmpty() ? content.get(content.size() - 1).getRoomId() : null;
-        return new ChatRoomSliceResponse(content, nextCursor, hasNext);
+        return new ChatRoomSliceResponse(enriched, nextCursor, hasNext);
     }
 
     public ChatRoomSliceResponse getPublicGroupRooms(Long userId, Long cursor, Integer size) {
@@ -126,8 +139,9 @@ public class ChatRoomService {
                 chatRoomQueryRepository.findPublicGroupRooms(userId, maxGroupMembers, safeCursor, safeSize + 1);
         boolean hasNext = fetched.size() > safeSize;
         List<ChatRoomResponse> content = hasNext ? fetched.subList(0, safeSize) : fetched;
+        List<ChatRoomResponse> enriched = enrichRoomsForDisplay(userId, content);
         Long nextCursor = hasNext && !content.isEmpty() ? content.get(content.size() - 1).getRoomId() : null;
-        return new ChatRoomSliceResponse(content, nextCursor, hasNext);
+        return new ChatRoomSliceResponse(enriched, nextCursor, hasNext);
     }
 
     @Transactional
@@ -296,5 +310,133 @@ public class ChatRoomService {
             return null;
         }
         return conversationRepository.existsByIdAndDeletedAtIsNull(cursor) ? cursor : null;
+    }
+
+    private ChatRoomResponse enrichSingleRoom(Long userId, ChatRoomResponse room) {
+        List<ChatRoomResponse> enriched = enrichRoomsForDisplay(userId, List.of(room));
+        return enriched.isEmpty() ? room : enriched.get(0);
+    }
+
+    private List<ChatRoomResponse> enrichRoomsForDisplay(Long userId, List<ChatRoomResponse> rooms) {
+        if (rooms == null || rooms.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> directRoomIds = rooms.stream()
+                .filter(room -> room.getType() == ConversationType.DIRECT)
+                .map(ChatRoomResponse::getRoomId)
+                .toList();
+        if (directRoomIds.isEmpty()) {
+            return rooms.stream()
+                    .map(this::withFallbackDisplayNameForGroup)
+                    .toList();
+        }
+
+        Map<Long, Long> roomPeerIds = resolvePeerIds(userId, directRoomIds);
+        List<Long> peerIds = roomPeerIds.values().stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        Map<Long, SocialMember> peerMembers = socialMemberRepository.findAllById(peerIds).stream()
+                .collect(Collectors.toMap(SocialMember::getId, member -> member));
+
+        return rooms.stream()
+                .map(room -> enrichRoomDisplay(room, roomPeerIds, peerMembers))
+                .toList();
+    }
+
+    private ChatRoomResponse withFallbackDisplayNameForGroup(ChatRoomResponse room) {
+        String displayName = room.getDisplayName();
+        if (displayName == null || displayName.isBlank()) {
+            displayName = room.getTitle();
+        }
+        return new ChatRoomResponse(
+                room.getRoomId(),
+                room.getType(),
+                room.getTitle(),
+                room.getOwnerId(),
+                room.getLastMessagePreview(),
+                room.getLastMessageAt(),
+                room.getUnreadCount(),
+                room.getParticipantCount(),
+                displayName,
+                room.getProfileImageUrl()
+        );
+    }
+
+    private ChatRoomResponse enrichRoomDisplay(ChatRoomResponse room,
+                                               Map<Long, Long> roomPeerIds,
+                                               Map<Long, SocialMember> peerMembers) {
+        if (room.getType() != ConversationType.DIRECT) {
+            return withFallbackDisplayNameForGroup(room);
+        }
+
+        Long peerId = roomPeerIds.get(room.getRoomId());
+        SocialMember peer = peerId == null ? null : peerMembers.get(peerId);
+
+        String displayName = room.getDisplayName();
+        String profileImageUrl = room.getProfileImageUrl();
+        if (peer != null) {
+            displayName = peer.getNickname();
+            profileImageUrl = normalizeProfileImageUrl(peer.getProfileImageUrl(filePublicBaseUrl, defaultProfileImage));
+        } else {
+            if (displayName == null || displayName.isBlank()) {
+                displayName = room.getTitle();
+            }
+            profileImageUrl = normalizeProfileImageUrl(defaultProfileImage);
+        }
+
+        return new ChatRoomResponse(
+                room.getRoomId(),
+                room.getType(),
+                room.getTitle(),
+                room.getOwnerId(),
+                room.getLastMessagePreview(),
+                room.getLastMessageAt(),
+                room.getUnreadCount(),
+                room.getParticipantCount(),
+                displayName,
+                profileImageUrl
+        );
+    }
+
+    private Map<Long, Long> resolvePeerIds(Long userId, List<Long> roomIds) {
+        List<ConversationParticipant> participants =
+                conversationParticipantRepository.findByConversationIdInAndDeletedAtIsNull(roomIds);
+        Map<Long, Long> roomPeerIds = new HashMap<>();
+        for (ConversationParticipant participant : participants) {
+            if (userId.equals(participant.getUserId())) {
+                continue;
+            }
+            roomPeerIds.putIfAbsent(participant.getConversationId(), participant.getUserId());
+        }
+        return roomPeerIds;
+    }
+
+    private String normalizeProfileImageUrl(String imageUrl) {
+        if (imageUrl == null || imageUrl.isBlank()) {
+            return imageUrl;
+        }
+        if (imageUrl.startsWith("http://") || imageUrl.startsWith("https://")) {
+            return imageUrl;
+        }
+        if (filePublicBaseUrl == null || filePublicBaseUrl.isBlank()) {
+            return imageUrl;
+        }
+        try {
+            URI uri = URI.create(filePublicBaseUrl);
+            String scheme = uri.getScheme();
+            String authority = uri.getAuthority();
+            if (scheme == null || authority == null) {
+                return imageUrl;
+            }
+            String origin = scheme + "://" + authority;
+            if (imageUrl.startsWith("/")) {
+                return origin + imageUrl;
+            }
+            return origin + "/" + imageUrl;
+        } catch (IllegalArgumentException e) {
+            return imageUrl;
+        }
     }
 }

@@ -58,7 +58,7 @@ public class ChatRoomAuthorizationChannelInterceptor implements ChannelIntercept
 
         Long userId = extractUserId(accessor.getUser());
         if (userId == null) {
-            deny(accessor.getUser(), ResponseCode.UNAUTHENTICATED, "인증 정보가 없습니다.");
+            deny(accessor.getUser(), command, destination, roomId, null, ResponseCode.UNAUTHENTICATED, "인증 정보가 없습니다.");
             return null;
         }
 
@@ -68,20 +68,22 @@ public class ChatRoomAuthorizationChannelInterceptor implements ChannelIntercept
 
         var access = chatPermissionQueryRepository.getRoomAccess(roomId, userId).orElse(null);
         if (access == null) {
-            deny(accessor.getUser(), ResponseCode.CHAT_ROOM_NOT_FOUND, null);
+            deny(accessor.getUser(), command, destination, roomId, userId, ResponseCode.CHAT_ROOM_NOT_FOUND, null);
             return null;
         }
         if (access.banned()) {
-            deny(accessor.getUser(), ResponseCode.CHAT_BANNED, null);
+            deny(accessor.getUser(), command, destination, roomId, userId, ResponseCode.CHAT_BANNED, null);
             return null;
         }
         if (!access.participant()) {
-            deny(accessor.getUser(), ResponseCode.CHAT_NOT_PARTICIPANT, null);
+            deny(accessor.getUser(), command, destination, roomId, userId, ResponseCode.CHAT_NOT_PARTICIPANT, null);
             return null;
         }
 
         rememberAuthorizedRoom(accessor, roomId);
         chatRoomAccessCacheService.grant(roomId, userId);
+        log.debug("[STOMP 권한 허용] command={}, destination={}, roomId={}, userId={}, source=db_check",
+                command, destination, roomId, userId);
 
         return message;
     }
@@ -136,10 +138,14 @@ public class ChatRoomAuthorizationChannelInterceptor implements ChannelIntercept
 
         if (redisHit) {
             rememberAuthorizedRoom(accessor, roomId);
+            log.debug("[STOMP 권한 캐시 허용] command={}, roomId={}, userId={}, sessionHit={}, redisHit={}",
+                    command, roomId, userId, sessionHit, redisHit);
             return true;
         }
 
         // 세션만 있고 Redis 캐시가 사라진 경우(밴/퇴장/TTL 만료), DB 재검증으로 내려보냅니다.
+        log.debug("[STOMP 권한 캐시 미스 재검증] command={}, roomId={}, userId={}, sessionHit={}, redisHit={}",
+                command, roomId, userId, sessionHit, redisHit);
         return false;
     }
 
@@ -160,8 +166,17 @@ public class ChatRoomAuthorizationChannelInterceptor implements ChannelIntercept
         roomIds.add(roomId);
     }
 
-    private void deny(Principal principal, ResponseCode responseCode, String message) {
+    private void deny(Principal principal,
+                      StompCommand command,
+                      String destination,
+                      Long roomId,
+                      Long userId,
+                      ResponseCode responseCode,
+                      String message) {
         if (principal == null) {
+            log.warn("[STOMP 권한 차단] command={}, destination={}, roomId={}, userId={}, code={}, reason={}",
+                    command, destination, roomId, userId, responseCode.getCode(),
+                    message == null ? responseCode.getMessage() : message);
             return;
         }
         SimpMessagingTemplate messagingTemplate = messagingTemplateProvider.getIfAvailable();
@@ -172,6 +187,8 @@ public class ChatRoomAuthorizationChannelInterceptor implements ChannelIntercept
                     new ChatWsErrorResponse(responseCode, message)
             );
         }
-        log.debug("[STOMP 권한 차단] user={}, code={}", principal.getName(), responseCode.getCode());
+        log.warn("[STOMP 권한 차단] user={}, command={}, destination={}, roomId={}, userId={}, code={}, reason={}",
+                principal.getName(), command, destination, roomId, userId, responseCode.getCode(),
+                message == null ? responseCode.getMessage() : message);
     }
 }

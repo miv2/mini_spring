@@ -10,8 +10,11 @@ import co.kr.mini_spring.chat.dto.response.ChatMessageResponse;
 import co.kr.mini_spring.chat.dto.response.ChatMessageSliceResponse;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.member.domain.SocialMember;
+import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -40,7 +43,14 @@ public class ChatMessageService {
     private final UserBlockRepository userBlockRepository;
     private final ChatMessageQueryRepository chatMessageQueryRepository;
     private final ChatPermissionQueryRepository chatPermissionQueryRepository;
+    private final SocialMemberRepository socialMemberRepository;
     private final StringRedisTemplate stringRedisTemplate;
+
+    @Value("${file.public-base-url}")
+    private String filePublicBaseUrl;
+
+    @Value("${file.default-profile-image:/uploads/default-profile.png}")
+    private String defaultProfileImage;
 
     @Transactional
     public ChatMessageResponse sendMessage(Long roomId, Long senderId, ChatSendMessageRequest request) {
@@ -66,21 +76,23 @@ public class ChatMessageService {
             );
             room.updateLastMessage(buildPreview(request.getContent()));
             log.info("[채팅 메시지 전송] roomId={}, senderId={}, messageId={}", roomId, senderId, message.getId());
-            return new ChatMessageResponse(message);
+            return toResponse(message);
         } catch (DataIntegrityViolationException e) {
             throw new BusinessException(ResponseCode.CHAT_DUPLICATE_MESSAGE);
         }
     }
 
     public ChatMessageSliceResponse getMessages(Long roomId, Long userId, Long cursor, Integer size) {
-        requireParticipantAccess(roomId, userId);
+        ChatPermissionQueryRepository.RoomAccess access = requireParticipantAccess(roomId, userId);
         int safeSize = sanitizeSize(size);
-        List<Message> fetched = chatMessageQueryRepository.findMessagesByCursor(roomId, cursor, safeSize + 1);
+        List<Message> fetched = access.type() == ConversationType.GROUP
+                ? chatMessageQueryRepository.findMessagesByCursorExcludingBlocked(roomId, userId, cursor, safeSize + 1)
+                : chatMessageQueryRepository.findMessagesByCursor(roomId, cursor, safeSize + 1);
         boolean hasNext = fetched.size() > safeSize;
         List<Message> content = hasNext ? fetched.subList(0, safeSize) : fetched;
         Long nextCursor = hasNext && !content.isEmpty() ? content.get(content.size() - 1).getId() : null;
         List<ChatMessageResponse> responses = content.stream()
-                .map(ChatMessageResponse::new)
+                .map(this::toResponse)
                 .toList();
         return new ChatMessageSliceResponse(responses, nextCursor, hasNext);
     }
@@ -102,7 +114,7 @@ public class ChatMessageService {
     }
 
     @Transactional
-    public void deleteMessage(Long messageId, Long userId) {
+    public ChatMessageResponse deleteMessage(Long messageId, Long userId) {
         Message message = messageRepository.findByIdAndDeletedAtIsNull(messageId)
                 .orElseThrow(() -> new BusinessException(ResponseCode.CHAT_INVALID_REQUEST, "삭제할 메시지를 찾을 수 없습니다."));
         if (!userId.equals(message.getSenderId())) {
@@ -118,6 +130,13 @@ public class ChatMessageService {
         refreshRoomLastMessage(message.getConversationId());
         log.info("[채팅 메시지 삭제] messageId={}, roomId={}, userId={}",
                 messageId, message.getConversationId(), userId);
+        ProfileInfo senderProfile = resolveSenderProfile(message);
+        return ChatMessageResponse.deleted(
+                message,
+                userId,
+                senderProfile.nickname(),
+                senderProfile.profileImageUrl()
+        );
     }
 
     private void validateBlockedRelationship(ConversationType type, Long roomId, Long senderId) {
@@ -211,5 +230,27 @@ public class ChatMessageService {
         }
         String trimmed = content.trim();
         return trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
+    }
+
+    private ChatMessageResponse toResponse(Message message) {
+        ProfileInfo senderProfile = resolveSenderProfile(message);
+        return ChatMessageResponse.of(message, senderProfile.nickname(), senderProfile.profileImageUrl());
+    }
+
+    private ProfileInfo resolveSenderProfile(Message message) {
+        SocialMember sender = message.getSender();
+        if (sender == null) {
+            sender = socialMemberRepository.findById(message.getSenderId()).orElse(null);
+        }
+        if (sender == null) {
+            return new ProfileInfo(null, defaultProfileImage);
+        }
+        return new ProfileInfo(
+                sender.getNickname(),
+                sender.getProfileImageUrl(filePublicBaseUrl, defaultProfileImage)
+        );
+    }
+
+    private record ProfileInfo(String nickname, String profileImageUrl) {
     }
 }

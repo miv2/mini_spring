@@ -26,6 +26,7 @@ public class ChatWebSocketConfig implements WebSocketMessageBrokerConfigurer {
                 .addInterceptors(chatHandshakeInterceptor)
                 .setAllowedOrigins(
                         "http://1.250.3.17:5173",
+                        "http://localhost:5173",
                         "https://minireact.duckdns.org"
                 );
     }
