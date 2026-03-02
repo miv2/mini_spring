@@ -52,6 +52,20 @@ public enum ResponseCode {
     SOCIAL_LOGIN_USER("A008", "소셜 로그인 가입자입니다. 소셜 로그인을 이용해주세요.", HttpStatus.BAD_REQUEST),
     USER_NOT_ACTIVE("A009", "활성화된 계정이 아닙니다.", HttpStatus.FORBIDDEN),
 
+    // Chat
+    CHAT_ROOM_NOT_FOUND("CH001", "채팅방을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
+    CHAT_NOT_PARTICIPANT("CH002", "채팅방 참여자가 아닙니다.", HttpStatus.FORBIDDEN),
+    CHAT_ROOM_FULL("CH003", "채팅방 최대 인원을 초과했습니다.", HttpStatus.BAD_REQUEST),
+    CHAT_FORBIDDEN("CH004", "채팅 기능에 대한 권한이 없습니다.", HttpStatus.FORBIDDEN),
+    CHAT_BANNED("CH005", "채팅방에서 밴된 사용자입니다.", HttpStatus.FORBIDDEN),
+    CHAT_MESSAGE_TOO_LONG("CH006", "메시지 길이가 제한을 초과했습니다.", HttpStatus.BAD_REQUEST),
+    CHAT_DELETE_WINDOW_EXPIRED("CH007", "메시지 삭제 가능 시간이 만료되었습니다.", HttpStatus.BAD_REQUEST),
+    CHAT_RATE_LIMIT_EXCEEDED("CH008", "메시지 전송 제한을 초과했습니다.", HttpStatus.TOO_MANY_REQUESTS),
+    CHAT_DUPLICATE_MESSAGE("CH009", "중복 메시지 요청입니다.", HttpStatus.CONFLICT),
+    CHAT_BLOCKED("CH010", "차단 관계로 메시지를 전송할 수 없습니다.", HttpStatus.FORBIDDEN),
+    CHAT_INVALID_ROOM_TYPE("CH011", "요청한 채팅방 타입이 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
+    CHAT_INVALID_REQUEST("CH012", "채팅 요청 값이 올바르지 않습니다.", HttpStatus.BAD_REQUEST),
+
     // File
     FILE_NOT_FOUND("F001", "파일을 찾을 수 없습니다.", HttpStatus.NOT_FOUND),
     INVALID_FILE_TYPE("F002", "허용되지 않은 파일 형식입니다.", HttpStatus.BAD_REQUEST),

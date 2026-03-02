@@ -75,11 +75,17 @@ public class SecurityConfig {
                     "/api/test/**"
                 ).permitAll()
 
+                // 4. WebSocket handshake 엔드포인트
+                .requestMatchers("/ws/**").permitAll()
+
                 // 4. 게시글 및 댓글 조회 (익명 허용)
                 .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
+
+                // 5. 채팅 API
+                .requestMatchers("/api/chat/**").authenticated()
                 
-                // 5. 관리자 전용
+                // 6. 관리자 전용
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 
                 // 그 외 모든 요청은 인증 필요
