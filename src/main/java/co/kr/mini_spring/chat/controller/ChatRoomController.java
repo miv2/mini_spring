@@ -4,9 +4,12 @@ import co.kr.mini_spring.chat.dto.request.CreateDirectRoomRequest;
 import co.kr.mini_spring.chat.dto.request.CreateGroupRoomRequest;
 import co.kr.mini_spring.chat.dto.request.InviteUserRequest;
 import co.kr.mini_spring.chat.dto.request.KickUserRequest;
+import co.kr.mini_spring.chat.dto.response.ChatParticipantResponse;
+import co.kr.mini_spring.chat.dto.response.ChatBanResponse;
 import co.kr.mini_spring.chat.dto.response.ChatRoomResponse;
 import co.kr.mini_spring.chat.dto.response.ChatRoomSliceResponse;
 import co.kr.mini_spring.chat.service.ChatRoomService;
+import java.util.List;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ApiResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
@@ -159,6 +162,34 @@ public class ChatRoomController {
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         chatRoomService.unban(roomId, currentUserId(memberAdapter), userId);
         return ApiResponse.success();
+    }
+
+    @GetMapping("/{roomId}/participants")
+    @Operation(summary = "채팅방 참여자 목록 조회", description = "참여자만 호출할 수 있습니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "접근 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "채팅방 없음")
+    })
+    public ApiResponse<List<ChatParticipantResponse>> getParticipants(
+            @PathVariable Long roomId,
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
+        return ApiResponse.success(chatRoomService.getParticipants(roomId, currentUserId(memberAdapter)));
+    }
+
+    @GetMapping("/{roomId}/bans")
+    @Operation(summary = "채팅방 밴(강퇴) 목록 조회", description = "방장만 호출할 수 있습니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "방장 권한 없음"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "채팅방 없음")
+    })
+    public ApiResponse<List<ChatBanResponse>> getBans(
+            @PathVariable Long roomId,
+            @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
+        return ApiResponse.success(chatRoomService.getBans(roomId, currentUserId(memberAdapter)));
     }
 
     private Long currentUserId(MemberAdapter memberAdapter) {

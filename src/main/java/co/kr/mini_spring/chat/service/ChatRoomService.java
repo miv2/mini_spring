@@ -10,6 +10,8 @@ import co.kr.mini_spring.chat.dto.request.CreateDirectRoomRequest;
 import co.kr.mini_spring.chat.dto.request.CreateGroupRoomRequest;
 import co.kr.mini_spring.chat.dto.response.ChatRoomResponse;
 import co.kr.mini_spring.chat.dto.response.ChatRoomSliceResponse;
+import co.kr.mini_spring.chat.dto.response.ChatParticipantResponse;
+import co.kr.mini_spring.chat.dto.response.ChatBanResponse;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
@@ -231,6 +233,45 @@ public class ChatRoomService {
         ensureOwner(roomId, requesterId);
         conversationBanRepository.deleteByConversationIdAndUserId(roomId, targetUserId);
         log.info("[채팅방 밴 해제] roomId={}, ownerId={}, targetUserId={}", roomId, requesterId, targetUserId);
+    }
+
+    public List<ChatParticipantResponse> getParticipants(Long roomId, Long requesterId) {
+        var access = chatPermissionQueryRepository.getRoomAccess(roomId, requesterId)
+                .orElseThrow(() -> new BusinessException(ResponseCode.CHAT_ROOM_NOT_FOUND));
+        if (!access.participant() && !access.owner()) {
+            throw new BusinessException(ResponseCode.CHAT_FORBIDDEN);
+        }
+
+        List<ConversationParticipant> participants = conversationParticipantRepository.findByConversationIdAndDeletedAtIsNull(roomId);
+        List<Long> userIds = participants.stream()
+                .map(ConversationParticipant::getUserId)
+                .collect(Collectors.toList());
+
+        return socialMemberRepository.findAllById(userIds).stream()
+                .map(member -> new ChatParticipantResponse(
+                        member.getId(),
+                        member.getNickname(),
+                        normalizeProfileImageUrl(member.getProfileImageUrl(filePublicBaseUrl, defaultProfileImage))))
+                .collect(Collectors.toList());
+    }
+
+    public List<ChatBanResponse> getBans(Long roomId, Long requesterId) {
+        ensureOwner(roomId, requesterId);
+        Conversation room = getRoom(roomId);
+        if (!room.isGroup()) {
+            throw new BusinessException(ResponseCode.CHAT_INVALID_ROOM_TYPE);
+        }
+        List<ConversationBan> bans = conversationBanRepository.findByConversationId(roomId);
+        List<Long> userIds = bans.stream()
+                .map(ConversationBan::getUserId)
+                .collect(Collectors.toList());
+
+        return socialMemberRepository.findAllById(userIds).stream()
+                .map(member -> new ChatBanResponse(
+                        member.getId(),
+                        member.getNickname(),
+                        normalizeProfileImageUrl(member.getProfileImageUrl(filePublicBaseUrl, defaultProfileImage))))
+                .collect(Collectors.toList());
     }
 
     private void ensureOwner(Long roomId, Long requesterId) {
