@@ -1,5 +1,6 @@
 package co.kr.mini_spring.post.domain;
 
+import co.kr.mini_spring.member.domain.SocialMember;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -25,6 +26,10 @@ public class PostLike {
     @JoinColumn(name = "post_id")
     private Post post;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "member_id", insertable = false, updatable = false)
+    private SocialMember member;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -35,8 +40,8 @@ public class PostLike {
     @AllArgsConstructor
     @EqualsAndHashCode
     public static class PostLikeId implements Serializable {
-        @Column(name = "author_id")
-        private Long authorId;
+        @Column(name = "member_id")
+        private Long memberId;
 
         @Column(name = "post_id")
         private Long postId;

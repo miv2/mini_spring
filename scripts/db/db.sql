@@ -83,10 +83,11 @@ CREATE TABLE IF NOT EXISTS post_hashtag (
 );
 
 CREATE TABLE IF NOT EXISTS post_like (
-  author_id BIGINT NOT NULL,
+  member_id BIGINT NOT NULL,
   post_id BIGINT NOT NULL,
   created_at TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (author_id, post_id),
+  PRIMARY KEY (member_id, post_id),
+  CONSTRAINT fk_post_like_member FOREIGN KEY (member_id) REFERENCES social_member (id) ON DELETE CASCADE,
   CONSTRAINT fk_post_like_post FOREIGN KEY (post_id) REFERENCES post (id) ON DELETE CASCADE
 );
 
