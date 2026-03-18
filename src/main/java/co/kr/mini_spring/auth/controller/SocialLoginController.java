@@ -2,7 +2,7 @@ package co.kr.mini_spring.auth.controller;
 
 import co.kr.mini_spring.auth.dto.response.SocialLoginLinkResponse;
 import co.kr.mini_spring.global.common.exception.BusinessException;
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,7 +40,7 @@ public class SocialLoginController {
      */
     @Operation(summary = "소셜 로그인 제공자 목록", description = "Google/Kakao 등 지원 중인 소셜 로그인 제공자와 인증 URL을 반환합니다.")
     @GetMapping("/providers")
-    public ApiResponse<List<SocialLoginLinkResponse>> getProviderLinks(HttpServletRequest request) {
+    public ApiResult<List<SocialLoginLinkResponse>> getProviderLinks(HttpServletRequest request) {
         log.debug("[SocialLogin] 전체 제공자 조회");
 
         List<SocialLoginLinkResponse> responses = StreamSupport
@@ -48,7 +48,7 @@ public class SocialLoginController {
                 .map(registration -> buildResponse(registration, request))
                 .toList();
 
-        return ApiResponse.success(responses);
+        return ApiResult.success(responses);
     }
 
     /**
@@ -56,13 +56,13 @@ public class SocialLoginController {
      */
     @Operation(summary = "소셜 로그인 단일 제공자 URL", description = "provider(google|kakao)를 지정해 인증 URL을 반환합니다.")
     @GetMapping("/providers/{provider}")
-    public ApiResponse<SocialLoginLinkResponse> getProviderLink(
+    public ApiResult<SocialLoginLinkResponse> getProviderLink(
             @PathVariable String provider,
             HttpServletRequest request
     ) {
         ClientRegistration registration = getRequiredRegistration(provider);
         log.debug("[SocialLogin] 단일 제공자 조회 provider={}", provider);
-        return ApiResponse.success(buildResponse(registration, request));
+        return ApiResult.success(buildResponse(registration, request));
     }
 
     /**

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "공통 응답 객체")
-public class ApiResponse<T> {
+public class ApiResult<T> {
     @Schema(description = "성공 여부")
     private final boolean success;
 
@@ -31,8 +31,8 @@ public class ApiResponse<T> {
     private final LocalDateTime timestamp;
 
     // 성공 응답 (데이터 포함)
-    public static <T> ApiResponse<T> success(T data) {
-        return new ApiResponse<>(
+    public static <T> ApiResult<T> success(T data) {
+        return new ApiResult<>(
                 true,
                 ResponseCode.SUCCESS.getCode(),
                 ResponseCode.SUCCESS.getMessage(),
@@ -42,8 +42,8 @@ public class ApiResponse<T> {
     }
 
     // 성공 응답 (데이터 없음)
-    public static <T> ApiResponse<T> success() {
-        return new ApiResponse<>(
+    public static <T> ApiResult<T> success() {
+        return new ApiResult<>(
                 true,
                 ResponseCode.SUCCESS.getCode(),
                 ResponseCode.SUCCESS.getMessage(),
@@ -53,8 +53,8 @@ public class ApiResponse<T> {
     }
 
     // 성공 응답 (커스텀 메시지)
-    public static <T> ApiResponse<T> success(String message, T data) {
-        return new ApiResponse<>(
+    public static <T> ApiResult<T> success(String message, T data) {
+        return new ApiResult<>(
                 true,
                 ResponseCode.SUCCESS.getCode(),
                 message,
@@ -64,8 +64,8 @@ public class ApiResponse<T> {
     }
 
     // 성공 응답 (커스텀 코드/메시지) - CREATED 등 성공 코드 지정
-    public static <T> ApiResponse<T> success(ResponseCode responseCode, T data) {
-        return new ApiResponse<>(
+    public static <T> ApiResult<T> success(ResponseCode responseCode, T data) {
+        return new ApiResult<>(
                 true,
                 responseCode.getCode(),
                 responseCode.getMessage(),
@@ -75,18 +75,18 @@ public class ApiResponse<T> {
     }
 
     // 실패 응답
-    public static <T> ApiResponse<T> fail(ResponseCode responseCode) {
+    public static <T> ApiResult<T> fail(ResponseCode responseCode) {
         return fail(responseCode, responseCode.getMessage(), null);
     }
 
     // 실패 응답 (커스텀 메시지)
-    public static <T> ApiResponse<T> fail(ResponseCode responseCode, String message) {
+    public static <T> ApiResult<T> fail(ResponseCode responseCode, String message) {
         return fail(responseCode, message, null);
     }
 
     // 실패 응답 (커스텀 메시지 + 데이터)
-    public static <T> ApiResponse<T> fail(ResponseCode responseCode, String message, T data) {
-        return new ApiResponse<>(
+    public static <T> ApiResult<T> fail(ResponseCode responseCode, String message, T data) {
+        return new ApiResult<>(
                 false,
                 responseCode.getCode(),
                 message,

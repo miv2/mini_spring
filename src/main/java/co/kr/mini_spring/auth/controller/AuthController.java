@@ -1,9 +1,11 @@
 package co.kr.mini_spring.auth.controller;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import co.kr.mini_spring.auth.dto.request.TokenRefreshRequest;
 import co.kr.mini_spring.auth.dto.response.TokenResponse;
 import co.kr.mini_spring.auth.service.AuthService;
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import co.kr.mini_spring.global.util.CookieUtil;
@@ -28,11 +30,11 @@ public class AuthController {
 
     @Operation(summary = "토큰 재발급", description = "RefreshToken을 검증해 새로운 Access/Refresh 토큰을 발급하고 쿠키를 갱신합니다.")
     @PostMapping("/refresh")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰")
-    public ApiResponse<TokenResponse> refresh(@Valid @RequestBody(required = false) TokenRefreshRequest request,
-                                             HttpServletRequest httpRequest,
-                                             HttpServletResponse httpResponse) {
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰")
+    public ApiResult<TokenResponse> refresh(@Valid @RequestBody(required = false) TokenRefreshRequest request,
+                                            HttpServletRequest httpRequest,
+                                            HttpServletResponse httpResponse) {
         log.info("[TokenRefresh] 요청 수신");
         
         String refreshToken = (request != null) ? request.getRefreshToken() : null;
@@ -43,25 +45,25 @@ public class AuthController {
         }
 
         if (refreshToken == null || refreshToken.isBlank()) {
-            return ApiResponse.fail(ResponseCode.TOKEN_NOT_FOUND);
+            return ApiResult.fail(ResponseCode.TOKEN_NOT_FOUND);
         }
 
         TokenResponse response = authService.refreshToken(refreshToken);
         
         CookieUtil.setAuthCookies(httpRequest, httpResponse, response);
         
-        return ApiResponse.success(ResponseCode.SUCCESS, response);
+        return ApiResult.success(ResponseCode.SUCCESS, response);
     }
 
     @Operation(summary = "로그아웃", description = "토큰을 무효화하고 인증 쿠키를 삭제합니다.")
     @PostMapping("/logout")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
-    public ApiResponse<Void> logout(@AuthenticationPrincipal MemberAdapter memberAdapter,
-                                    HttpServletRequest request,
-                                    HttpServletResponse response) {
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    public ApiResult<Void> logout(@AuthenticationPrincipal MemberAdapter memberAdapter,
+                                  HttpServletRequest request,
+                                  HttpServletResponse response) {
         if (memberAdapter == null) {
-            return ApiResponse.fail(ResponseCode.UNAUTHENTICATED);
+            return ApiResult.fail(ResponseCode.UNAUTHENTICATED);
         }
 
         String email = memberAdapter.getUsername();
@@ -73,6 +75,6 @@ public class AuthController {
         
         CookieUtil.clearAuthCookies(request, response);
         
-        return ApiResponse.success();
+        return ApiResult.success();
     }
 }

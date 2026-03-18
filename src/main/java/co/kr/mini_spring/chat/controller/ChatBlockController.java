@@ -1,8 +1,10 @@
 package co.kr.mini_spring.chat.controller;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import co.kr.mini_spring.chat.service.ChatBlockService;
 import co.kr.mini_spring.global.common.exception.BusinessException;
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import io.swagger.v3.oas.annotations.Operation;
@@ -24,28 +26,28 @@ public class ChatBlockController {
     @PostMapping("/{userId}")
     @Operation(summary = "사용자 차단")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+            @ApiResponse(responseCode = "200", description = "성공"),
+            @ApiResponse(responseCode = "400", description = "잘못된 요청"),
+            @ApiResponse(responseCode = "401", description = "인증 필요")
     })
-    public ApiResponse<Void> block(
+    public ApiResult<Void> block(
             @PathVariable Long userId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         chatBlockService.blockUser(currentUserId(memberAdapter), userId);
-        return ApiResponse.success();
+        return ApiResult.success();
     }
 
     @DeleteMapping("/{userId}")
     @Operation(summary = "사용자 차단 해제")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
+            @ApiResponse(responseCode = "200", description = "성공"),
+            @ApiResponse(responseCode = "401", description = "인증 필요")
     })
-    public ApiResponse<Void> unblock(
+    public ApiResult<Void> unblock(
             @PathVariable Long userId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         chatBlockService.unblockUser(currentUserId(memberAdapter), userId);
-        return ApiResponse.success();
+        return ApiResult.success();
     }
 
     private Long currentUserId(MemberAdapter memberAdapter) {

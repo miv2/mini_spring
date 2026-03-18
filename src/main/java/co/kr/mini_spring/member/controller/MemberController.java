@@ -1,7 +1,9 @@
 package co.kr.mini_spring.member.controller;
 
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
 import co.kr.mini_spring.global.common.exception.BusinessException;
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import co.kr.mini_spring.member.dto.response.MemberResponse;
@@ -27,9 +29,9 @@ public class MemberController {
 
     @Operation(summary = "내 정보 조회", description = "현재 로그인한 사용자의 프로필 정보를 조회합니다.")
     @GetMapping("/me")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
-    public ApiResponse<MemberResponse> getMyInfo(
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    public ApiResult<MemberResponse> getMyInfo(
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter
     ) {
         if (memberAdapter == null) {
@@ -37,14 +39,14 @@ public class MemberController {
         }
         log.info("[GetMyInfo] 요청 memberId={}", memberAdapter.getMember().getId());
         MemberResponse response = memberService.getMyInfo(memberAdapter.getMember().getId());
-        return ApiResponse.success(response);
+        return ApiResult.success(response);
     }
 
     @Operation(summary = "프로필 이미지 수정", description = "현재 로그인한 사용자의 프로필 이미지를 업데이트합니다.")
     @PostMapping(value = "/me/profile-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
-    public ApiResponse<String> updateProfileImage(
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    public ApiResult<String> updateProfileImage(
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter,
             @RequestParam("file") MultipartFile file
     ) {
@@ -56,6 +58,6 @@ public class MemberController {
         log.info("[UpdateProfileImage] 요청 memberId={}, fileName={}", memberId, file.getOriginalFilename());
         
         String imageUrl = memberService.updateProfileImage(memberId, file);
-        return ApiResponse.success(imageUrl);
+        return ApiResult.success(imageUrl);
     }
 }

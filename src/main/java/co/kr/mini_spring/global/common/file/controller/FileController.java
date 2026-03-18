@@ -2,7 +2,7 @@ package co.kr.mini_spring.global.common.file.controller;
 
 import co.kr.mini_spring.global.common.file.domain.StoredFile;
 import co.kr.mini_spring.global.common.file.service.FileService;
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.ApiResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +27,11 @@ public class FileController {
 
     @Operation(summary = "이미지 다중 업로드", description = "여러 장의 이미지를 업로드하고 URL 목록을 반환합니다.")
     @PostMapping(value = "/images", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ApiResponse<List<String>> uploadImages(
+    public ApiResult<List<String>> uploadImages(
             @RequestParam("files") List<MultipartFile> files
     ) {
         List<StoredFile> saved = fileService.uploadImages(files);
         List<String> urls = saved.stream().map(StoredFile::getFullUrl).toList();
-        return ApiResponse.success(urls);
+        return ApiResult.success(urls);
     }
 }

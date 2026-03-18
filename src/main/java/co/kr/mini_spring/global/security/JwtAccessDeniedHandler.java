@@ -1,6 +1,6 @@
 package co.kr.mini_spring.global.security;
 
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
@@ -42,7 +42,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
         // 에러 응답 생성
-        ApiResponse<Void> errorResponse = ApiResponse.fail(ResponseCode.HANDLE_ACCESS_DENIED);
+        ApiResult<Void> errorResponse = ApiResult.fail(ResponseCode.HANDLE_ACCESS_DENIED);
 
         // JSON 응답 작성
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));

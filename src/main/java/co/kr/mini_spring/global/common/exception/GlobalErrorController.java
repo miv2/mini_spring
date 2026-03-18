@@ -1,6 +1,6 @@
 package co.kr.mini_spring.global.common.exception;
 
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,21 +10,21 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Spring Boot 기본 /error 응답을 프로젝트의 표준 응답(ApiResponse) 형태로 통일합니다.
+ * Spring Boot 기본 /error 응답을 프로젝트의 표준 응답(ApiResult) 형태로 통일합니다.
  * - 404/405 등 전역 예외 핸들러로 잡히지 않는 케이스도 일관된 포맷으로 내려줍니다.
  */
 @RestController
 public class GlobalErrorController implements ErrorController {
 
     /**
-     * /error 요청을 처리해 ApiResponse로 변환합니다.
+     * /error 요청을 처리해 ApiResult 변환합니다.
      */
     @RequestMapping("/error")
-    public ResponseEntity<ApiResponse<Void>> handleError(HttpServletRequest request) {
+    public ResponseEntity<ApiResult<Void>> handleError(HttpServletRequest request) {
         int statusCode = resolveStatusCode(request);
         ResponseCode responseCode = mapToResponseCode(statusCode);
 
-        ApiResponse<Void> body = ApiResponse.fail(responseCode);
+        ApiResult<Void> body = ApiResult.fail(responseCode);
         return ResponseEntity.status(responseCode.getHttpStatus()).body(body);
     }
 

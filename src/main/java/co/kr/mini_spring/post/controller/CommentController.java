@@ -1,6 +1,8 @@
 package co.kr.mini_spring.post.controller;
 
-import co.kr.mini_spring.global.common.response.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+
+import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import co.kr.mini_spring.post.dto.request.CommentCreateRequest;
@@ -36,13 +38,13 @@ public class CommentController {
      */
     @Operation(summary = "댓글 목록 조회", description = "특정 게시글의 최상위 댓글을 오프셋 기반 페이징으로 조회합니다. 대댓글은 children에 포함됩니다.")
     @GetMapping("/posts/{postId}")
-    public ApiResponse<PageResponse<CommentResponse>> getComments(
+    public ApiResult<PageResponse<CommentResponse>> getComments(
             @Parameter(description = "게시글 ID") @PathVariable Long postId,
             @Parameter(description = "페이지 번호 (0부터 시작)") @RequestParam(value = "page", defaultValue = "0") int page,
             @Parameter(description = "페이지 크기") @RequestParam(value = "size", defaultValue = "10") int size,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         Pageable pageable = PageRequest.of(page, size);
-        return ApiResponse.success(commentService.getComments(postId, pageable, memberAdapter != null ? memberAdapter.getMember() : null));
+        return ApiResult.success(commentService.getComments(postId, pageable, memberAdapter != null ? memberAdapter.getMember() : null));
     }
 
     /**
@@ -54,14 +56,14 @@ public class CommentController {
      */
     @PostMapping
     @Operation(summary = "댓글/대댓글 생성", description = "게시글에 댓글을 생성하거나 parentId로 대댓글을 생성합니다.")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "게시글 또는 부모 댓글을 찾을 수 없음")
-    public ApiResponse<CommentResponse> createComment(
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "404", description = "게시글 또는 부모 댓글을 찾을 수 없음")
+    public ApiResult<CommentResponse> createComment(
             @Valid @RequestBody CommentCreateRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         CommentResponse response = commentService.createComment(request, memberAdapter.getMember());
-        return ApiResponse.success(response);
+        return ApiResult.success(response);
     }
 
     /**
@@ -74,16 +76,16 @@ public class CommentController {
      */
     @PutMapping("/{commentId}")
     @Operation(summary = "댓글 수정", description = "작성자가 댓글을 수정합니다.")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
-    public ApiResponse<CommentResponse> updateComment(
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
+    @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
+    public ApiResult<CommentResponse> updateComment(
             @Parameter(description = "수정할 댓글 ID") @PathVariable Long commentId,
             @Valid @RequestBody CommentUpdateRequest request,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         CommentResponse response = commentService.updateComment(commentId, request, memberAdapter.getMember());
-        return ApiResponse.success(response);
+        return ApiResult.success(response);
     }
 
     /**
@@ -95,14 +97,14 @@ public class CommentController {
      */
     @DeleteMapping("/{commentId}")
     @Operation(summary = "댓글 삭제", description = "작성자가 댓글을 삭제합니다. 자식이 있으면 소프트 삭제.")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 필요")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
-    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
-    public ApiResponse<Void> deleteComment(
+    @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "401", description = "인증 필요")
+    @ApiResponse(responseCode = "403", description = "권한 없음 (작성자 아님)")
+    @ApiResponse(responseCode = "404", description = "댓글을 찾을 수 없음")
+    public ApiResult<Void> deleteComment(
             @Parameter(description = "삭제할 댓글 ID") @PathVariable Long commentId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         commentService.deleteComment(commentId, memberAdapter.getMember());
-        return ApiResponse.success();
+        return ApiResult.success();
     }
 }
