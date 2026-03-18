@@ -1,11 +1,12 @@
 package co.kr.mini_spring.chat.domain.repository;
 
 import co.kr.mini_spring.chat.domain.ConversationType;
+import co.kr.mini_spring.chat.domain.QConversation;
+import co.kr.mini_spring.chat.domain.QConversationParticipant;
 import co.kr.mini_spring.chat.dto.response.ChatRoomResponse;
+import co.kr.mini_spring.member.domain.QSocialMember;
 import com.querydsl.core.Tuple;
 import com.querydsl.core.types.Expression;
-import com.querydsl.core.types.Order;
-import com.querydsl.core.types.OrderSpecifier;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.CaseBuilder;
 import com.querydsl.core.types.dsl.DateTimeExpression;
@@ -17,12 +18,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 import static co.kr.mini_spring.chat.domain.QConversation.conversation;
 import static co.kr.mini_spring.chat.domain.QConversationBan.conversationBan;
-import static co.kr.mini_spring.chat.domain.QConversationParticipant.conversationParticipant;
 import static co.kr.mini_spring.chat.domain.QMessage.message;
 
 @Repository
@@ -31,42 +29,8 @@ public class ChatRoomQueryRepository {
 
     private final JPAQueryFactory queryFactory;
 
-    public List<ChatRoomResponse> findMyRooms(Long userId) {
-        var participant = new co.kr.mini_spring.chat.domain.QConversationParticipant("cp_outer");
-        Expression<Long> unreadCountExpr = unreadCountExpression(userId, participant);
-        Expression<Long> participantCountExpr = participantCountExpression();
-        Expression<String> titleExpr = titleExpression(userId);
-        DateTimeExpression<LocalDateTime> sortAtExpr = conversation.lastMessageAt.coalesce(conversation.createdAt);
-
-        List<Tuple> rows = queryFactory
-                .select(
-                        conversation.id,
-                        conversation.type,
-                        titleExpr,
-                        conversation.ownerId,
-                        conversation.lastMessagePreview,
-                        conversation.lastMessageAt,
-                        unreadCountExpr,
-                        participantCountExpr
-                )
-                .from(participant)
-                .join(conversation).on(participant.conversationId.eq(conversation.id))
-                .where(
-                        participant.userId.eq(userId),
-                        participant.deletedAt.isNull(),
-                        conversation.deletedAt.isNull(),
-                        roomCursorCondition(null, sortAtExpr)
-                )
-                .orderBy(sortAtExpr.desc(), conversation.id.desc())
-                .fetch();
-
-        return rows.stream()
-                .map(tuple -> toRoomResponse(tuple, titleExpr, unreadCountExpr, participantCountExpr))
-                .toList();
-    }
-
     public List<ChatRoomResponse> findMyRooms(Long userId, Long cursor, int limit) {
-        var participant = new co.kr.mini_spring.chat.domain.QConversationParticipant("cp_outer");
+        var participant = new QConversationParticipant("cp_outer");
         Expression<Long> unreadCountExpr = unreadCountExpression(userId, participant);
         Expression<Long> participantCountExpr = participantCountExpression();
         Expression<String> titleExpr = titleExpression(userId);
@@ -93,45 +57,6 @@ public class ChatRoomQueryRepository {
                 )
                 .orderBy(sortAtExpr.desc(), conversation.id.desc())
                 .limit(limit)
-                .fetch();
-
-        return rows.stream()
-                .map(tuple -> toRoomResponse(tuple, titleExpr, unreadCountExpr, participantCountExpr))
-                .toList();
-    }
-
-    public List<ChatRoomResponse> findPublicGroupRooms(Long userId, long maxMembers) {
-        Expression<Long> participantCountExpr = participantCountExpression();
-        Expression<Long> unreadCountExpr = Expressions.constant(0L);
-        Expression<String> titleExpr = conversation.title;
-        DateTimeExpression<LocalDateTime> sortAtExpr = conversation.lastMessageAt.coalesce(conversation.createdAt);
-
-        List<Tuple> rows = queryFactory
-                .select(
-                        conversation.id,
-                        conversation.type,
-                        titleExpr,
-                        conversation.ownerId,
-                        conversation.lastMessagePreview,
-                        conversation.lastMessageAt,
-                        unreadCountExpr,
-                        participantCountExpr
-                )
-                .from(conversation)
-                .where(
-                        conversation.type.eq(ConversationType.GROUP),
-                        conversation.deletedAt.isNull(),
-                        roomCursorCondition(null, sortAtExpr),
-                        maxMembersCondition(maxMembers),
-                        JPAExpressions.selectOne()
-                                .from(conversationBan)
-                                .where(
-                                        conversationBan.conversationId.eq(conversation.id),
-                                        conversationBan.userId.eq(userId)
-                                )
-                                .notExists()
-                )
-                .orderBy(sortAtExpr.desc(), conversation.id.desc())
                 .fetch();
 
         return rows.stream()
@@ -196,7 +121,7 @@ public class ChatRoomQueryRepository {
     }
 
     private Expression<Long> participantCountExpression() {
-        var participantCount = new co.kr.mini_spring.chat.domain.QConversationParticipant("cp_count");
+        var participantCount = new QConversationParticipant("cp_count");
         return JPAExpressions.select(participantCount.count())
                 .from(participantCount)
                 .where(
@@ -206,7 +131,7 @@ public class ChatRoomQueryRepository {
     }
 
     private Expression<Long> unreadCountExpression(Long userId,
-                                                   co.kr.mini_spring.chat.domain.QConversationParticipant participant) {
+                                                   QConversationParticipant participant) {
         return JPAExpressions.select(message.count())
                 .from(message)
                 .where(
@@ -218,8 +143,8 @@ public class ChatRoomQueryRepository {
     }
 
     private Expression<String> titleExpression(Long userId) {
-        var participantPeer = new co.kr.mini_spring.chat.domain.QConversationParticipant("cp_peer");
-        var peer = new co.kr.mini_spring.member.domain.QSocialMember("peer_member");
+        var participantPeer = new QConversationParticipant("cp_peer");
+        var peer = new QSocialMember("peer_member");
         return new CaseBuilder()
                 .when(conversation.type.eq(ConversationType.GROUP))
                 .then(conversation.title)
@@ -235,7 +160,7 @@ public class ChatRoomQueryRepository {
                 );
     }
 
-    private com.querydsl.core.types.dsl.BooleanExpression maxMembersCondition(long maxMembers) {
+    private BooleanExpression maxMembersCondition(long maxMembers) {
         var participantLimit = new co.kr.mini_spring.chat.domain.QConversationParticipant("cp_limit");
         return JPAExpressions.selectOne()
                 .from(participantLimit)
@@ -252,7 +177,7 @@ public class ChatRoomQueryRepository {
         if (cursor == null) {
             return null;
         }
-        var cursorConversation = new co.kr.mini_spring.chat.domain.QConversation("cursor_conversation");
+        var cursorConversation = new QConversation("cursor_conversation");
         DateTimeExpression<LocalDateTime> cursorSortAt = cursorConversation.lastMessageAt.coalesce(cursorConversation.createdAt);
         return sortAtExpr.lt(
                         JPAExpressions.select(cursorSortAt)
@@ -275,26 +200,4 @@ public class ChatRoomQueryRepository {
                 );
     }
 
-    public Map<Long, Long> countParticipantsByConversationIds(List<Long> conversationIds) {
-        if (conversationIds == null || conversationIds.isEmpty()) {
-            return Map.of();
-        }
-        Expression<Long> participantCountExpr = conversationParticipant.count();
-
-        List<Tuple> rows = queryFactory
-                .select(conversationParticipant.conversationId, participantCountExpr)
-                .from(conversationParticipant)
-                .where(
-                        conversationParticipant.conversationId.in(conversationIds),
-                        conversationParticipant.deletedAt.isNull()
-                )
-                .groupBy(conversationParticipant.conversationId)
-                .fetch();
-
-        return rows.stream()
-                .collect(Collectors.toMap(
-                        tuple -> tuple.get(conversationParticipant.conversationId),
-                        tuple -> tuple.get(participantCountExpr)
-                ));
-    }
 }
