@@ -1,5 +1,6 @@
 package co.kr.mini_spring.post.dto.request;
 
+import co.kr.mini_spring.post.validation.ValidHashtags;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
@@ -20,6 +21,7 @@ public class PostCreateRequest {
     @NotBlank(message = "내용은 필수입니다.")
     private String content;
 
-    @Schema(description = "해시태그 목록", example = "[\"spring\", \"react\"]")
+    @Schema(description = "해시태그 목록 (영문, 숫자, 완성형 한글만 허용. `ㅋㅋ`, `ㅎㅎ` 같은 자모-only 태그는 불가)", example = "[\"spring\", \"react\"]")
+    @ValidHashtags
     private List<String> hashtags;
 }

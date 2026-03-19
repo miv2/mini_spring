@@ -5,6 +5,7 @@ import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.PostHashtag;
 import co.kr.mini_spring.post.domain.repository.HashtagRepository;
 import co.kr.mini_spring.post.domain.repository.HashtagQueryRepository;
+import co.kr.mini_spring.post.validation.HashtagNormalizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,13 +29,7 @@ public class HashtagService {
 
     @Transactional
     public List<Hashtag> findOrCreateHashtags(List<String> hashtagNames) {
-        if (CollectionUtils.isEmpty(hashtagNames)) return List.of();
-
-        Set<String> normalizedNames = hashtagNames.stream()
-                .filter(name -> name != null && !name.isBlank())
-                .map(name -> name.trim().toLowerCase().replaceAll("[^a-z0-9가-힣]", ""))
-                .filter(name -> !name.isEmpty())
-                .collect(Collectors.toSet());
+        Set<String> normalizedNames = HashtagNormalizer.normalizeAll(hashtagNames);
 
         if (normalizedNames.isEmpty()) return List.of();
 
@@ -79,18 +74,22 @@ public class HashtagService {
 
     @Transactional
     public void updateHashtagsForPost(Post post, List<String> newHashtagNames) {
+        if (newHashtagNames == null) {
+            return;
+        }
+
         Set<String> currentHashtagNames = post.getPostHashtags().stream()
                 .map(ph -> ph.getHashtag().getName())
                 .collect(Collectors.toSet());
-        List<String> incomingNames = newHashtagNames == null ? new ArrayList<>() : newHashtagNames;
+        Set<String> normalizedIncomingNames = HashtagNormalizer.normalizeAll(newHashtagNames);
 
         post.getPostHashtags().removeIf(ph -> {
-            boolean isRemoved = !incomingNames.contains(ph.getHashtag().getName());
+            boolean isRemoved = !normalizedIncomingNames.contains(ph.getHashtag().getName());
             if (isRemoved) ph.getHashtag().decreaseUsage();
             return isRemoved;
         });
 
-        List<String> namesToAdd = incomingNames.stream()
+        List<String> namesToAdd = normalizedIncomingNames.stream()
                 .filter(name -> !currentHashtagNames.contains(name))
                 .toList();
         if (!CollectionUtils.isEmpty(namesToAdd)) attachHashtagsToPost(post, namesToAdd);
