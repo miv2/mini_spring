@@ -75,5 +75,13 @@ public class OpenApiConfig {
                         .pathsToMatch("/api/chat/**")
                         .build();
             }
+
+            @Bean
+            public GroupedOpenApi postApiGroup() {
+                return GroupedOpenApi.builder()
+                        .group("게시글 API")
+                        .pathsToMatch("/api/posts/**", "/api/comments/**")
+                        .build();
+            }
         }
         
