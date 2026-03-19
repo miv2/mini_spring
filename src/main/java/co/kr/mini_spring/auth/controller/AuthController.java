@@ -2,9 +2,9 @@ package co.kr.mini_spring.auth.controller;
 
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 
-import co.kr.mini_spring.auth.dto.request.TokenRefreshRequest;
 import co.kr.mini_spring.auth.dto.response.TokenResponse;
 import co.kr.mini_spring.auth.service.AuthService;
+import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ApiResult;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
@@ -13,7 +13,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
+import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,24 +28,20 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Operation(summary = "토큰 재발급", description = "RefreshToken을 검증해 새로운 Access/Refresh 토큰을 발급하고 쿠키를 갱신합니다.")
+    @Operation(summary = "토큰 재발급", description = "요청 쿠키의 refreshToken을 검증해 새로운 Access/Refresh 토큰을 발급하고 인증 쿠키를 갱신합니다.")
     @PostMapping("/refresh")
     @ApiResponse(responseCode = "200", description = "성공")
+    @ApiResponse(responseCode = "400", description = "잘못된 요청")
     @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰")
-    public ApiResult<TokenResponse> refresh(@Valid @RequestBody(required = false) TokenRefreshRequest request,
+    public ApiResult<TokenResponse> refresh(
+                                            @Parameter(hidden = true)
+                                            @CookieValue(value = CookieUtil.REFRESH_TOKEN_NAME, required = false) String refreshToken,
                                             HttpServletRequest httpRequest,
                                             HttpServletResponse httpResponse) {
         log.info("[TokenRefresh] 요청 수신");
-        
-        String refreshToken = (request != null) ? request.getRefreshToken() : null;
-        if (refreshToken == null || refreshToken.isBlank()) {
-            refreshToken = CookieUtil.getCookie(httpRequest, CookieUtil.REFRESH_TOKEN_NAME)
-                    .map(jakarta.servlet.http.Cookie::getValue)
-                    .orElse(null);
-        }
 
         if (refreshToken == null || refreshToken.isBlank()) {
-            return ApiResult.fail(ResponseCode.TOKEN_NOT_FOUND);
+            throw new BusinessException(ResponseCode.TOKEN_NOT_FOUND);
         }
 
         TokenResponse response = authService.refreshToken(refreshToken);
