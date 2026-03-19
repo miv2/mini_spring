@@ -61,34 +61,4 @@ public class StoredFile {
         this.contentType = contentType;
         this.type = type == null ? FileType.OTHER : type;
     }
-
-    public String getFullUrl(String baseUrl) {
-        if (storedName == null || storedName.isBlank()) return null;
-        
-        // baseUrl이 없으면 저장된 filePath 그대로 사용 (하위 호환)
-        String base = (baseUrl == null || baseUrl.isBlank()) ? "" : baseUrl;
-        if (!base.isEmpty() && !base.endsWith("/")) base += "/";
-        
-        // DB에 저장된 filePath가 이미 절대 경로(http)라면 그대로 반환
-        if (filePath != null && filePath.startsWith("http")) {
-            return getFullUrl();
-        }
-
-        String path = (filePath == null) ? "" : filePath;
-        if (path.startsWith("/")) path = path.substring(1);
-        if (!path.isEmpty() && !path.endsWith("/")) path += "/";
-
-        return base + path + storedName;
-    }
-
-    public String getFullUrl() {
-        if (filePath == null || filePath.isBlank()) {
-            return storedName;
-        }
-        if (storedName == null || storedName.isBlank()) {
-            return filePath;
-        }
-        String normalizedName = storedName.startsWith("/") ? storedName.substring(1) : storedName;
-        return filePath.endsWith("/") ? filePath + normalizedName : filePath + "/" + normalizedName;
-    }
 }

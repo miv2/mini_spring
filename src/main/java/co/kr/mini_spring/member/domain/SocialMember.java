@@ -1,6 +1,7 @@
 package co.kr.mini_spring.member.domain;
 
 import co.kr.mini_spring.global.common.file.domain.StoredFile;
+import co.kr.mini_spring.global.common.file.util.FileUrlResolver;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -89,7 +90,7 @@ public class SocialMember {
     }
 
     public String getProfileImageUrl(String baseUrl, String defaultUrl) {
-        return profileImage != null ? profileImage.getFullUrl(baseUrl) : defaultUrl;
+        return FileUrlResolver.resolveOrDefault(baseUrl, profileImage, defaultUrl);
     }
 
     public void updateProfile(String name, String nickname) {

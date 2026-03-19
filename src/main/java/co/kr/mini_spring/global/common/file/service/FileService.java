@@ -4,10 +4,10 @@ import co.kr.mini_spring.global.common.exception.FileException;
 import co.kr.mini_spring.global.common.file.domain.FileType;
 import co.kr.mini_spring.global.common.file.domain.StoredFile;
 import co.kr.mini_spring.global.common.file.domain.repository.ImageFileRepository;
+import co.kr.mini_spring.global.common.file.storage.FileStorage;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -15,9 +15,6 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -30,10 +27,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class FileService {
 
-    @Value("${file.upload-dir}")
-    private String uploadDir;
-
     private final ImageFileRepository imageFileRepository;
+    private final FileStorage fileStorage;
 
     private static final List<String> ALLOWED_IMAGE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -52,21 +47,10 @@ public class FileService {
         String extension = extractExtension(originalName);
         String storedName = UUID.randomUUID() + "." + extension;
 
-        // 3. 물리적 디렉토리 생성
-        Path targetDir = Paths.get(uploadDir, datePath).toAbsolutePath().normalize();
-        createDirectory(targetDir);
+        // 3. 파일 저장소 업로드
+        fileStorage.upload(file, datePath, storedName);
 
-        // 4. 파일 물리 저장
-        Path targetPath = targetDir.resolve(storedName);
-        try {
-            file.transferTo(targetPath);
-            log.info("[파일 저장 성공] path={}", targetPath);
-        } catch (IOException e) {
-            log.error("[파일 저장 실패] error={}", e.getMessage());
-            throw new FileException(ResponseCode.FILE_UPLOAD_ERROR, "파일 저장 중 오류가 발생했습니다.");
-        }
-
-        // 5. DB 메타데이터 저장 (도메인 없는 순수 날짜 경로만 저장)
+        // 4. DB 메타데이터 저장 (도메인 없는 순수 날짜 경로만 저장)
         try {
             StoredFile imageFile = StoredFile.builder()
                     .originName(originalName)
@@ -78,10 +62,12 @@ public class FileService {
                     .type(FileType.IMAGE)
                     .build();
 
-            return imageFileRepository.save(imageFile);
+            StoredFile savedFile = imageFileRepository.save(imageFile);
+            registerRollbackCleanup(savedFile.getFilePath(), savedFile.getStoredName());
+            return savedFile;
         } catch (RuntimeException e) {
-            // DB 저장 실패 시 이미 저장된 물리 파일 삭제
-            cleanupPhysicalFile(targetPath);
+            // DB 저장 실패 시 이미 저장된 객체 삭제
+            fileStorage.delete(datePath + "/", storedName);
             throw e;
         }
     }
@@ -101,14 +87,16 @@ public class FileService {
                 savedFiles.add(uploadImage(file));
             }
         } catch (RuntimeException e) {
-            // 원자성 확보: 하나라도 실패하면 방금 저장된 모든 파일/레코드 삭제
-            for (StoredFile savedFile : savedFiles) {
-                try {
-                    deleteFile(savedFile);
-                } catch (RuntimeException cleanupException) {
-                    log.warn("[다중 업로드 보상 삭제 실패] fileId={}, error={}",
-                            savedFile.getId(), cleanupException.getMessage());
-                    e.addSuppressed(cleanupException);
+            // 트랜잭션이 없을 때만 즉시 보상 삭제한다.
+            if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+                for (StoredFile savedFile : savedFiles) {
+                    try {
+                        deleteFile(savedFile);
+                    } catch (RuntimeException cleanupException) {
+                        log.warn("[다중 업로드 보상 삭제 실패] fileId={}, error={}",
+                                savedFile.getId(), cleanupException.getMessage());
+                        e.addSuppressed(cleanupException);
+                    }
                 }
             }
             throw e;
@@ -123,53 +111,10 @@ public class FileService {
     public void deleteFile(StoredFile storedFile) {
         if (storedFile == null) return;
 
-        // 1. 물리적 파일 삭제
-        // DB의 filePath가 '2026/02/19/' 형태이므로 바로 uploadDir와 조합 가능
-        Path targetPath = Paths.get(uploadDir, storedFile.getFilePath(), storedFile.getStoredName()).toAbsolutePath().normalize();
-        cleanupPhysicalFile(targetPath);
-
         // 2. DB 메타데이터 삭제
         imageFileRepository.delete(storedFile);
         log.info("[파일 DB 레코드 삭제 성공] fileId={}", storedFile.getId());
-    }
-
-    /**
-     * DB 레코드 삭제는 트랜잭션 안에서 수행하고, 물리 파일 삭제는 커밋 이후에 수행합니다.
-     * (롤백 시 물리 파일이 먼저 삭제되는 문제 방지)
-     */
-    @Transactional
-    public void deleteFileAfterCommit(StoredFile storedFile) {
-        if (storedFile == null) return;
-
-        Path targetPath = Paths.get(uploadDir, storedFile.getFilePath(), storedFile.getStoredName())
-                .toAbsolutePath()
-                .normalize();
-
-        imageFileRepository.delete(storedFile);
-        log.info("[파일 DB 레코드 삭제 성공] fileId={}", storedFile.getId());
-
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    cleanupPhysicalFile(targetPath);
-                }
-            });
-        } else {
-            // 트랜잭션 외부 호출 방어
-            cleanupPhysicalFile(targetPath);
-        }
-    }
-
-    private void cleanupPhysicalFile(Path path) {
-        try {
-            if (Files.exists(path)) {
-                Files.delete(path);
-                log.info("[물리 파일 삭제 성공] path={}", path);
-            }
-        } catch (IOException e) {
-            log.warn("[물리 파일 삭제 실패] path={}, error={}", path, e.getMessage());
-        }
+        registerDeleteAfterCommit(storedFile.getFilePath(), storedFile.getStoredName());
     }
 
     /**
@@ -203,14 +148,33 @@ public class FileService {
         return LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
     }
 
-    private void createDirectory(Path path) {
-        try {
-            if (!Files.exists(path)) {
-                Files.createDirectories(path);
-            }
-        } catch (IOException e) {
-            throw new FileException(ResponseCode.FILE_UPLOAD_ERROR, "디렉토리 생성에 실패했습니다.");
+    private void registerRollbackCleanup(String filePath, String storedName) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
         }
+
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == TransactionSynchronization.STATUS_ROLLED_BACK) {
+                    fileStorage.delete(filePath, storedName);
+                }
+            }
+        });
+    }
+
+    private void registerDeleteAfterCommit(String filePath, String storedName) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    fileStorage.delete(filePath, storedName);
+                }
+            });
+            return;
+        }
+
+        fileStorage.delete(filePath, storedName);
     }
 
     /**

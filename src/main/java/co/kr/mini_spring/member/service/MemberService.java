@@ -2,6 +2,7 @@ package co.kr.mini_spring.member.service;
 
 import co.kr.mini_spring.global.common.file.domain.StoredFile;
 import co.kr.mini_spring.global.common.file.service.FileService;
+import co.kr.mini_spring.global.common.file.util.FileUrlResolver;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.member.domain.SocialMember;
@@ -65,12 +66,12 @@ public class MemberService {
 
         // 3. 기존 이미지는 커밋 이후에 물리 삭제 (기본 프로필 이미지는 제외)
         if (oldImage != null && !isDefaultProfileImage(oldImage)) {
-            fileService.deleteFileAfterCommit(oldImage);
+            fileService.deleteFile(oldImage);
         }
 
         log.info("[프로필 이미지 업데이트 성공] memberId={}, fileId={}", memberId, imageFile.getId());
 
-        return imageFile.getFullUrl(publicBaseUrl);
+        return FileUrlResolver.resolve(publicBaseUrl, imageFile);
     }
 
     private boolean isDefaultProfileImage(StoredFile image) {

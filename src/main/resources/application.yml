@@ -22,12 +22,17 @@ management:
       show-details: always
 
 jwt:
-  access-token-expiration: 3600000  # 1시간
+  access-token-expiration: 1800000  # 30분 (30 * 60 * 1000)
   refresh-token-expiration: 604800000 # 7일
 
 cache:
   post:
     list-ttl-seconds: 60
+
+file:
+  r2:
+    region: auto
+    key-prefix:
 
 springdoc:
   querydsl:

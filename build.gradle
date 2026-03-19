@@ -46,6 +46,10 @@ dependencies {
     // PostgreSQL
     runtimeOnly 'org.postgresql:postgresql'
 
+    // Cloudflare R2 (S3-compatible)
+    implementation platform('software.amazon.awssdk:bom:2.31.18')
+    implementation 'software.amazon.awssdk:s3'
+
     // Lombok
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
