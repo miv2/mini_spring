@@ -23,6 +23,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.io.IOException;
 import java.util.Map;
@@ -89,7 +90,24 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
                 .accessTokenExpiresAt(accessTokenInfo.getExpiresAt())
                 .refreshTokenExpiresAt(refreshTokenInfo.getExpiresAt())
                 .build();
-        
+
+        // 1. 쿠키에서 redirect_uri 추출
+        String redirectUri = CookieUtil.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
+                .map(cookie -> cookie.getValue())
+                .orElse(null);
+
+        // 2. 모바일/웹 분기 처리
+        if (redirectUri != null && !redirectUri.isBlank()) {
+            // [모바일 분기] 명시적인 redirect_uri가 있는 경우 (예: minispring://login-callback)
+            // HttpOnly 쿠키 대신 URL 쿼리 파라미터로 토큰을 전달하여 모바일 네이티브 앱이 파싱할 수 있게 지원
+            return UriComponentsBuilder.fromUriString(redirectUri)
+                    .queryParam("accessToken", tokenResponse.getAccessToken())
+                    .queryParam("refreshToken", tokenResponse.getRefreshToken())
+                    .build().toUriString();
+        }
+
+        // [웹 분기] 기본 웹 요청인 경우 (redirect_uri가 없는 경우)
+        // 기존처럼 HttpOnly 보안 쿠키에 토큰을 담고, 프론트엔드 홈으로 리다이렉트
         CookieUtil.setAuthCookies(request, response, tokenResponse);
 
         return frontendUrl + "/home";
