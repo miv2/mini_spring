@@ -29,6 +29,8 @@ bin/
 # Local Environment
 .env
 .env.local
+.env.*
+local.env
 uploads/
 
 # Querydsl
@@ -38,9 +40,6 @@ uploads/
 # Documentation & Tracking
 GEMINI.md
 docs/
-
-# Local settings
-src/main/resources/application-local.yml
 
 # Help
 HELP.md
