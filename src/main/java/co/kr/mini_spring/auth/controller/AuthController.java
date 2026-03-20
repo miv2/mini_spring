@@ -1,7 +1,5 @@
 package co.kr.mini_spring.auth.controller;
 
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-
 import co.kr.mini_spring.auth.dto.response.TokenResponse;
 import co.kr.mini_spring.auth.service.AuthService;
 import co.kr.mini_spring.global.common.exception.BusinessException;
@@ -10,10 +8,11 @@ import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import co.kr.mini_spring.global.util.CookieUtil;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

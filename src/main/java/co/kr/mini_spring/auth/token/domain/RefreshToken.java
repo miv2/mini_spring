@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.RedisHash;
 import org.springframework.data.redis.core.TimeToLive;
 import org.springframework.data.redis.core.index.Indexed;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Getter
@@ -42,7 +43,7 @@ public class RefreshToken {
     }
 
     private Long calculateExpirationSeconds(LocalDateTime expiresAt) {
-        return java.time.Duration.between(LocalDateTime.now(), expiresAt).getSeconds();
+        return Duration.between(LocalDateTime.now(), expiresAt).getSeconds();
     }
 
     public boolean isExpired() {

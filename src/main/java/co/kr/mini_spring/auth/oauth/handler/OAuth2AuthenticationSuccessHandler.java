@@ -11,6 +11,7 @@ import co.kr.mini_spring.member.domain.MemberRole;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -93,7 +94,7 @@ public class OAuth2AuthenticationSuccessHandler extends SimpleUrlAuthenticationS
 
         // 1. 쿠키에서 redirect_uri 추출
         String redirectUri = CookieUtil.getCookie(request, HttpCookieOAuth2AuthorizationRequestRepository.REDIRECT_URI_PARAM_COOKIE_NAME)
-                .map(cookie -> cookie.getValue())
+                .map(Cookie::getValue)
                 .orElse(null);
 
         // 2. 모바일/웹 분기 처리
