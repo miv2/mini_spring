@@ -6,7 +6,6 @@ import co.kr.mini_spring.global.common.file.util.FileUrlResolver;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.member.domain.SocialMember;
-import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.member.domain.repository.SocialMemberQueryRepository;
 import co.kr.mini_spring.member.dto.response.MemberResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +27,6 @@ import java.nio.file.Paths;
 @RequiredArgsConstructor
 public class MemberService {
 
-    private final SocialMemberRepository socialMemberRepository;
     private final SocialMemberQueryRepository socialMemberQueryRepository;
     private final FileService fileService;
 

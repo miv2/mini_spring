@@ -1,15 +1,13 @@
 package co.kr.mini_spring.member.controller;
 
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-
-import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ApiResult;
-import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.global.security.AuthUtils;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import co.kr.mini_spring.member.dto.response.MemberResponse;
 import co.kr.mini_spring.member.service.MemberService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,12 +32,9 @@ public class MemberController {
     public ApiResult<MemberResponse> getMyInfo(
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter
     ) {
-        if (memberAdapter == null) {
-            throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        }
-        log.info("[GetMyInfo] 요청 memberId={}", memberAdapter.getMember().getId());
-        MemberResponse response = memberService.getMyInfo(memberAdapter.getMember().getId());
-        return ApiResult.success(response);
+        Long memberId = AuthUtils.currentUserId(memberAdapter);
+        log.info("[GetMyInfo] 요청 memberId={}", memberId);
+        return ApiResult.success(memberService.getMyInfo(memberId));
     }
 
     @Operation(summary = "프로필 이미지 수정", description = "현재 로그인한 사용자의 프로필 이미지를 업데이트합니다.")
@@ -50,14 +45,8 @@ public class MemberController {
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter,
             @RequestParam("file") MultipartFile file
     ) {
-        if (memberAdapter == null) {
-            throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        }
-
-        Long memberId = memberAdapter.getMember().getId();
+        Long memberId = AuthUtils.currentUserId(memberAdapter);
         log.info("[UpdateProfileImage] 요청 memberId={}, fileName={}", memberId, file.getOriginalFilename());
-        
-        String imageUrl = memberService.updateProfileImage(memberId, file);
-        return ApiResult.success(imageUrl);
+        return ApiResult.success(memberService.updateProfileImage(memberId, file));
     }
 }
