@@ -5,7 +5,6 @@ import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberQueryRepository;
-import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.domain.Comment;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.repository.CommentQueryRepository;
@@ -36,7 +35,6 @@ public class CommentService {
     private final CommentQueryRepository commentQueryRepository;
     private final PostRepository postRepository;
     private final PostQueryRepository postQueryRepository;
-    private final SocialMemberRepository socialMemberRepository;
     private final SocialMemberQueryRepository socialMemberQueryRepository;
 
     @Value("${file.public-base-url}")
@@ -81,7 +79,7 @@ public class CommentService {
 
         List<CommentResponse> responseContent = content.stream()
                 .map(comment -> mapToCommentResponse(comment, currentUser, authorMap))
-                .collect(Collectors.toList());
+                .toList();
 
         return new PageResponse<>(
                 responseContent,
@@ -189,7 +187,7 @@ public class CommentService {
         List<CommentResponse> children = comment.getChildren().stream()
                 .sorted(Comparator.comparing(Comment::getCreatedAt))
                 .map(child -> mapToCommentResponse(child, currentUser, authorMap))
-                .collect(Collectors.toList());
+                .toList();
         return new CommentResponse(comment, author, currentUser, children, publicBaseUrl, defaultProfileImage);
     }
 }

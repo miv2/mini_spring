@@ -86,10 +86,11 @@ public class PostQueryRepository {
         }
 
         // 2. 페이징에 맞는 ID 목록 조회
+        OrderSpecifier<?>[] orderSpecifiers = buildOrderSpecifiers(pageable).toArray(new OrderSpecifier[0]);
         List<Long> ids = queryFactory.select(post.id)
                 .from(post)
                 .where(conditions)
-                .orderBy(buildOrderSpecifiers(pageable).toArray(new OrderSpecifier[0]))
+                .orderBy(orderSpecifiers)
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
@@ -106,7 +107,7 @@ public class PostQueryRepository {
                 .leftJoin(postHashtag.hashtag, hashtag).fetchJoin()
                 .where(post.id.in(ids))
                 .distinct()
-                .orderBy(buildOrderSpecifiers(pageable).toArray(new OrderSpecifier[0]))
+                .orderBy(orderSpecifiers)
                 .fetch();
 
         return new PageImpl<>(content, pageable, total);

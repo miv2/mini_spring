@@ -5,7 +5,6 @@ import co.kr.mini_spring.global.common.response.PageResponse;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.member.domain.SocialMember;
 import co.kr.mini_spring.member.domain.repository.SocialMemberQueryRepository;
-import co.kr.mini_spring.member.domain.repository.SocialMemberRepository;
 import co.kr.mini_spring.post.domain.Post;
 import co.kr.mini_spring.post.domain.PostLike;
 import co.kr.mini_spring.post.domain.repository.PostLikeRepository;
@@ -39,7 +38,6 @@ public class PostService {
     private final PostRepository postRepository;
     private final PostQueryRepository postQueryRepository;
     private final PostLikeRepository postLikeRepository;
-    private final SocialMemberRepository socialMemberRepository;
     private final SocialMemberQueryRepository socialMemberQueryRepository;
     private final HashtagService hashtagService;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -191,7 +189,7 @@ public class PostService {
 
         List<PostSummaryResponse> responseContent = postPage.getContent().stream()
                 .map(post -> new PostSummaryResponse(post, post.getAuthor(), publicBaseUrl, defaultProfileImage))
-                .collect(Collectors.toList());
+                .toList();
 
         return new PageResponse<>(
                 responseContent,
