@@ -78,7 +78,7 @@ public class SecurityConfig {
                 // 4. WebSocket handshake 엔드포인트
                 .requestMatchers("/ws/**").permitAll()
 
-                // 4. 게시글 및 댓글 조회 (익명 허용)
+                // 5. 게시글 및 댓글 조회 (익명 허용)
                 .requestMatchers(HttpMethod.GET, "/api/posts/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/comments/**").permitAll()
 

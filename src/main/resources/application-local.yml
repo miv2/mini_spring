@@ -73,6 +73,11 @@ file:
   public-base-url: ${FILE_PUBLIC_BASE_URL}
   default-profile-image: ${FILE_DEFAULT_PROFILE_IMAGE:/uploads/default-profile.png}
 
+logging:
+  level:
+    co.kr.mini_spring: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
 
 app:
   frontend-url: ${APP_FRONTEND_URL}

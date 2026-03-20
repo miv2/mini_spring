@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,7 +29,7 @@ public class FileService {
     private final ImageFileRepository imageFileRepository;
     private final FileStorage fileStorage;
 
-    private static final List<String> ALLOWED_IMAGE_EXTENSIONS = Arrays.asList("jpg", "jpeg", "png", "gif", "webp");
+    private static final List<String> ALLOWED_IMAGE_EXTENSIONS = List.of("jpg", "jpeg", "png", "gif", "webp");
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
     /**

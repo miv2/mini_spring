@@ -1,23 +1,23 @@
 package co.kr.mini_spring.global.security;
 
+import co.kr.mini_spring.global.common.response.ResponseCode;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
-import co.kr.mini_spring.global.common.response.ResponseCode;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
-import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.io.IOException;
-import java.time.Duration;
 
 /**
  * JWT 인증 필터
@@ -109,7 +109,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         // 2. 쿠키에서 추출
         if (request.getCookies() != null) {
-            for (jakarta.servlet.http.Cookie cookie : request.getCookies()) {
+            for (Cookie cookie : request.getCookies()) {
                 if ("accessToken".equals(cookie.getName())) {
                     return cookie.getValue();
                 }

@@ -27,6 +27,10 @@ spring:
     properties:
       hibernate:
         format_sql: false # 운영 로그 최소화
+        jdbc:
+          time_zone: Asia/Seoul
+        default_batch_fetch_size: 100
+    open-in-view: false
 
   security:
     oauth2:

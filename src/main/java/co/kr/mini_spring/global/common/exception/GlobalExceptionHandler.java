@@ -13,11 +13,11 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import jakarta.validation.ConstraintViolationException;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
@@ -46,7 +46,7 @@ public class GlobalExceptionHandler {
                 ))
                 .toList();
 
-        log.warn("[Validation] fields={}", errors.stream().map(ValidationErrorResponse.FieldError::field).collect(Collectors.joining(", ")));
+        log.warn("[Validation] fields={}", String.join(", ", errors.stream().map(ValidationErrorResponse.FieldError::field).toList()));
 
         ValidationErrorResponse data = new ValidationErrorResponse(errors);
         ApiResult<ValidationErrorResponse> body = ApiResult.fail(ResponseCode.INVALID_INPUT_VALUE, ResponseCode.INVALID_INPUT_VALUE.getMessage(), data);
@@ -117,8 +117,8 @@ public class GlobalExceptionHandler {
     /**
      * 파일 업로드 용량 초과 처리.
      */
-    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
-    protected ResponseEntity<ApiResult<Void>> handleMaxUploadSizeExceededException(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    protected ResponseEntity<ApiResult<Void>> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException e) {
         log.warn("[BadRequest] maxUploadSizeExceeded={}", e.getMessage());
         ApiResult<Void> body = ApiResult.fail(ResponseCode.FILE_SIZE_EXCEEDED);
         return new ResponseEntity<>(body, ResponseCode.FILE_SIZE_EXCEEDED.getHttpStatus());

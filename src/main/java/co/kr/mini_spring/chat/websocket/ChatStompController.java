@@ -4,7 +4,6 @@ import co.kr.mini_spring.chat.dto.request.ChatSendMessageRequest;
 import co.kr.mini_spring.chat.dto.response.ChatMessageResponse;
 import co.kr.mini_spring.chat.dto.response.ChatWsErrorResponse;
 import co.kr.mini_spring.chat.service.ChatMessageService;
-import co.kr.mini_spring.chat.websocket.ChatEventPublisher;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;

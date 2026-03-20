@@ -1,6 +1,6 @@
 package co.kr.mini_spring.global.util;
 
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Predicate;
 
 /**
@@ -18,7 +18,6 @@ public final class NicknameGenerator {
     private static final String[] NOUNS = {
             "사자", "호랑이", "코끼리", "기린", "고래", "돌고래", "참새", "독수리", "강아지", "고양이"
     };
-    private static final Random RANDOM = new Random();
 
     public static String generateUniqueNickname(Predicate<String> isDuplicate) {
         while (true) {
@@ -30,9 +29,9 @@ public final class NicknameGenerator {
     }
 
     private static String buildNickname() {
-        String adjective = ADJECTIVES[RANDOM.nextInt(ADJECTIVES.length)];
-        String noun = NOUNS[RANDOM.nextInt(NOUNS.length)];
-        int number = RANDOM.nextInt(10000); // 0000~9999
+        String adjective = ADJECTIVES[ThreadLocalRandom.current().nextInt(ADJECTIVES.length)];
+        String noun = NOUNS[ThreadLocalRandom.current().nextInt(NOUNS.length)];
+        int number = ThreadLocalRandom.current().nextInt(10000); // 0000~9999
         return String.format("%s%s#%04d", adjective, noun, number);
     }
 }

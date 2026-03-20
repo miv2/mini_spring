@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Contact;
 import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.License;
@@ -35,53 +34,52 @@ import java.util.List;
 )
 public class OpenApiConfig {
 
-        static final String BEARER_SCHEME = "BearerAuth";
+    static final String BEARER_SCHEME = "BearerAuth";
 
-        @Bean
-        public OpenAPI baseOpenAPI() {
-                return new OpenAPI()
-                                .info(new io.swagger.v3.oas.models.info.Info()
-                                                .title("mini_spring API")
-                                                .version("v1")
-                                                .description("게시글/댓글 플랫폼 REST API")
-                                                .license(new License().name("MIT")))
-                                .servers(List.of(
-                                                new Server().url("https://minispring.duckdns.org")
-                                                                .description("Production Server"),
-                                                new Server().url("http://localhost:8081")
-                                                                .description("Local Development Server")))
-                                .components(new Components()
-                                                .addSecuritySchemes(BEARER_SCHEME,
-                                                                new io.swagger.v3.oas.models.security.SecurityScheme()
-                                                                                .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
-                                                                                .scheme("bearer")
-                                                                                .bearerFormat("JWT")))
-                                .addSecurityItem(new io.swagger.v3.oas.models.security.SecurityRequirement()
-                                                .addList(BEARER_SCHEME));
-        }
+    @Bean
+    public OpenAPI baseOpenAPI() {
+        return new OpenAPI()
+                .info(new io.swagger.v3.oas.models.info.Info()
+                        .title("mini_spring API")
+                        .version("v1")
+                        .description("게시글/댓글 플랫폼 REST API")
+                        .license(new License().name("MIT")))
+                .servers(List.of(
+                        new Server().url("https://minispring.duckdns.org")
+                                .description("Production Server"),
+                        new Server().url("http://localhost:8081")
+                                .description("Local Development Server")))
+                .components(new Components()
+                        .addSecuritySchemes(BEARER_SCHEME,
+                                new io.swagger.v3.oas.models.security.SecurityScheme()
+                                        .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
+                                        .scheme("bearer")
+                                        .bearerFormat("JWT")))
+                .addSecurityItem(new io.swagger.v3.oas.models.security.SecurityRequirement()
+                        .addList(BEARER_SCHEME));
+    }
 
-            @Bean
-            public GroupedOpenApi apiGroup() {
-                return GroupedOpenApi.builder()
-                        .group("전체 API")
-                        .pathsToMatch("/api/**")
-                        .build();
-            }
+    @Bean
+    public GroupedOpenApi apiGroup() {
+        return GroupedOpenApi.builder()
+                .group("전체 API")
+                .pathsToMatch("/api/**")
+                .build();
+    }
 
-            @Bean
-            public GroupedOpenApi chatApiGroup() {
-                return GroupedOpenApi.builder()
-                        .group("채팅 API")
-                        .pathsToMatch("/api/chat/**")
-                        .build();
-            }
+    @Bean
+    public GroupedOpenApi chatApiGroup() {
+        return GroupedOpenApi.builder()
+                .group("채팅 API")
+                .pathsToMatch("/api/chat/**")
+                .build();
+    }
 
-            @Bean
-            public GroupedOpenApi postApiGroup() {
-                return GroupedOpenApi.builder()
-                        .group("게시글 API")
-                        .pathsToMatch("/api/posts/**", "/api/comments/**")
-                        .build();
-            }
-        }
-        
+    @Bean
+    public GroupedOpenApi postApiGroup() {
+        return GroupedOpenApi.builder()
+                .group("게시글 API")
+                .pathsToMatch("/api/posts/**", "/api/comments/**")
+                .build();
+    }
+}
