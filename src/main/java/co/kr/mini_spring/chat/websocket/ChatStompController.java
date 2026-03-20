@@ -4,6 +4,7 @@ import co.kr.mini_spring.chat.dto.request.ChatSendMessageRequest;
 import co.kr.mini_spring.chat.dto.response.ChatMessageResponse;
 import co.kr.mini_spring.chat.dto.response.ChatWsErrorResponse;
 import co.kr.mini_spring.chat.service.ChatMessageService;
+import co.kr.mini_spring.chat.websocket.ChatEventPublisher;
 import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ResponseCode;
 import co.kr.mini_spring.global.security.MemberAdapter;
@@ -14,7 +15,6 @@ import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageExceptionHandler;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -27,7 +27,7 @@ import java.security.Principal;
 public class ChatStompController {
 
     private final ChatMessageService chatMessageService;
-    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final ChatEventPublisher chatEventPublisher;
 
     @MessageMapping("/chat/rooms/{roomId}/send")
     public void sendMessage(@DestinationVariable Long roomId,
@@ -38,7 +38,7 @@ public class ChatStompController {
                 roomId, senderId, request.getClientMessageId(), request.getType(),
                 request.getContent() == null ? 0 : request.getContent().length());
         ChatMessageResponse response = chatMessageService.sendMessage(roomId, senderId, request);
-        simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + roomId, response);
+        chatEventPublisher.publishMessageEvent(roomId, response);
         log.info("[STOMP SEND 브로드캐스트 완료] roomId={}, messageId={}, senderId={}, eventType={}",
                 roomId, response.getMessageId(), senderId, response.getEventType());
     }

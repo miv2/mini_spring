@@ -179,23 +179,15 @@ public class ChatRoomQueryRepository {
         }
         var cursorConversation = new QConversation("cursor_conversation");
         DateTimeExpression<LocalDateTime> cursorSortAt = cursorConversation.lastMessageAt.coalesce(cursorConversation.createdAt);
-        return sortAtExpr.lt(
-                        JPAExpressions.select(cursorSortAt)
-                                .from(cursorConversation)
-                                .where(
-                                        cursorConversation.id.eq(cursor),
-                                        cursorConversation.deletedAt.isNull()
-                                )
-                )
+        var cursorSortAtSubQuery = JPAExpressions.select(cursorSortAt)
+                .from(cursorConversation)
+                .where(
+                        cursorConversation.id.eq(cursor),
+                        cursorConversation.deletedAt.isNull()
+                );
+        return sortAtExpr.lt(cursorSortAtSubQuery)
                 .or(
-                        sortAtExpr.eq(
-                                        JPAExpressions.select(cursorSortAt)
-                                                .from(cursorConversation)
-                                                .where(
-                                                        cursorConversation.id.eq(cursor),
-                                                        cursorConversation.deletedAt.isNull()
-                                                )
-                                )
+                        sortAtExpr.eq(cursorSortAtSubQuery)
                                 .and(conversation.id.lt(cursor))
                 );
     }

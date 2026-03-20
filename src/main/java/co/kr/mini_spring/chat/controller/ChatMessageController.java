@@ -1,14 +1,12 @@
 package co.kr.mini_spring.chat.controller;
 
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-
 import co.kr.mini_spring.chat.dto.request.MarkReadRequest;
 import co.kr.mini_spring.chat.dto.response.ChatMessageResponse;
 import co.kr.mini_spring.chat.dto.response.ChatMessageSliceResponse;
 import co.kr.mini_spring.chat.service.ChatMessageService;
-import co.kr.mini_spring.global.common.exception.BusinessException;
+import co.kr.mini_spring.chat.websocket.ChatEventPublisher;
 import co.kr.mini_spring.global.common.response.ApiResult;
-import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.global.security.AuthUtils;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,7 +15,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class ChatMessageController {
 
     private final ChatMessageService chatMessageService;
-    private final SimpMessagingTemplate simpMessagingTemplate;
+    private final ChatEventPublisher chatEventPublisher;
 
     @GetMapping("/rooms/{roomId}/messages")
     @Operation(summary = "채팅 메시지 커서 조회", description = "cursor 미지정 시 최신 메시지부터 조회합니다.")
@@ -74,14 +71,11 @@ public class ChatMessageController {
             @PathVariable Long messageId,
             @Parameter(hidden = true) @AuthenticationPrincipal MemberAdapter memberAdapter) {
         ChatMessageResponse deleted = chatMessageService.deleteMessage(messageId, currentUserId(memberAdapter));
-        simpMessagingTemplate.convertAndSend("/topic/chat/rooms/" + deleted.getRoomId(), deleted);
+        chatEventPublisher.publishMessageEvent(deleted.getRoomId(), deleted);
         return ApiResult.success();
     }
 
     private Long currentUserId(MemberAdapter memberAdapter) {
-        if (memberAdapter == null || memberAdapter.getMember() == null) {
-            throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        }
-        return memberAdapter.getMember().getId();
+        return AuthUtils.currentUserId(memberAdapter);
     }
 }

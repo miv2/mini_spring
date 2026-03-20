@@ -1,7 +1,5 @@
 package co.kr.mini_spring.chat.controller;
 
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-
 import co.kr.mini_spring.chat.dto.request.CreateDirectRoomRequest;
 import co.kr.mini_spring.chat.dto.request.CreateGroupRoomRequest;
 import co.kr.mini_spring.chat.dto.request.InviteUserRequest;
@@ -12,12 +10,12 @@ import co.kr.mini_spring.chat.dto.response.ChatRoomResponse;
 import co.kr.mini_spring.chat.dto.response.ChatRoomSliceResponse;
 import co.kr.mini_spring.chat.service.ChatRoomService;
 import java.util.List;
-import co.kr.mini_spring.global.common.exception.BusinessException;
 import co.kr.mini_spring.global.common.response.ApiResult;
-import co.kr.mini_spring.global.common.response.ResponseCode;
+import co.kr.mini_spring.global.security.AuthUtils;
 import co.kr.mini_spring.global.security.MemberAdapter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -195,9 +193,6 @@ public class ChatRoomController {
     }
 
     private Long currentUserId(MemberAdapter memberAdapter) {
-        if (memberAdapter == null || memberAdapter.getMember() == null) {
-            throw new BusinessException(ResponseCode.UNAUTHENTICATED);
-        }
-        return memberAdapter.getMember().getId();
+        return AuthUtils.currentUserId(memberAdapter);
     }
 }

@@ -347,10 +347,7 @@ public class ChatRoomService {
     }
 
     private Long sanitizeCursor(Long cursor) {
-        if (cursor == null) {
-            return null;
-        }
-        return conversationRepository.existsByIdAndDeletedAtIsNull(cursor) ? cursor : null;
+        return cursor;
     }
 
     private ChatRoomResponse enrichSingleRoom(Long userId, ChatRoomResponse room) {
